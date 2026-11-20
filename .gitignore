@@ -1,0 +1,9 @@
+/vendor/
+/.env
+/.env.*
+!/.env.example
+/config/contact.php
+/config/contact.local.php
+/runtime/
+*.rate.json
+/previews/

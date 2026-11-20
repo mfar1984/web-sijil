@@ -1,0 +1,25 @@
+# e-Certificate marketing site: Apache 2.4 / LiteSpeed (cPanel) rules.
+# PHP's built-in development server ignores this file.
+
+DirectoryIndex index.php
+Options -Indexes
+
+# mod_rewrite is intentionally not wrapped in <IfModule>: if it is missing the
+# server fails closed with a 500 instead of silently exposing private paths.
+RewriteEngine On
+
+# Deny non-public directories (403), including the bare directory name.
+RewriteRule ^(?:tests|vendor|config|partials|previews)(?:/|$) - [F,L]
+
+# Deny project and environment files at the site root (403).
+RewriteRule ^(?:README\.md|composer\.(?:json|lock)|\.env.*|\.gitignore|\.htaccess)$ - [F,L]
+
+# Retired static pages: 301 to the PHP equivalent in the same directory.
+# The query string is kept because the substitution has no "?" and no QSD flag.
+RewriteCond %{REQUEST_URI} ^(.*/)(?:index|features|pricing|contact)\.html$
+RewriteRule ^(index|features|pricing|contact)\.html$ %1$1.php [R=301,L]
+
+# Second layer for the same private files in any directory, without mod_rewrite.
+<FilesMatch "^(?:README\.md|composer\.(?:json|lock)|\.env.*|\.gitignore|\.htaccess)$">
+    Require all denied
+</FilesMatch>

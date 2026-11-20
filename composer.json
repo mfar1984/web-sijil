@@ -1,0 +1,13 @@
+{
+  "name": "e-certificate/marketing-contact",
+  "description": "Standalone e-Certificate marketing contact endpoint",
+  "license": "proprietary",
+  "type": "project",
+  "require": {
+    "php": ">=8.1",
+    "phpmailer/phpmailer": "^6.9"
+  },
+  "config": {
+    "sort-packages": true
+  }
+}
