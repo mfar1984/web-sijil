@@ -781,13 +781,15 @@ em { color: var(--cyan); font: inherit; font-style: normal; }
   .selected-plan { padding: 25px 20px; }
 }
 
-/* Verify Certificate page */
+/* Verify Certificate page
+   The page uses .verify-tool-panel and .verify-outcome because .verify-panel and
+   .verify-result already style the home page's illustration cards above. */
 .verify-hero { min-height: 0; }
 .verify-hero .shell-hero-copy { padding-top: 56px; padding-bottom: 56px; }
 .verify-section { padding: 40px 0 72px; background: var(--paper); }
 .verify-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 26px; align-items: start; }
 .verify-tool { position: relative; min-width: 0; padding: 24px 20px; background: #fff; border: 1px solid #d6dcda; border-radius: 16px; box-shadow: 0 22px 60px rgba(16,33,59,.08); }
-.verify-tool [hidden], .verify-result[hidden] { display: none !important; }
+.verify-tool [hidden], .verify-outcome[hidden] { display: none !important; }
 .verify-tool-heading { margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid #e1e5e3; }
 .verify-tool-heading .form-step { margin: 0; color: #2661ac; font-size: 12px; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; }
 .verify-tool-heading h2 { margin: 6px 0 0; color: var(--navy-900); font: 750 26px/1.15 var(--display); letter-spacing: -.03em; }

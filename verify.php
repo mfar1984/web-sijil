@@ -67,7 +67,7 @@ require __DIR__ . '/partials/header.php';
             </button>
           </div>
 
-          <div class="verify-panel verify-scan-panel" id="verify-panel-scan" data-verify-panel="scan" hidden>
+          <div class="verify-tool-panel verify-scan-panel" id="verify-panel-scan" data-verify-panel="scan" hidden>
             <div class="verify-viewfinder" data-viewfinder data-camera-state="idle">
               <video data-camera-video playsinline muted aria-label="Camera preview"></video>
               <span class="viewfinder-corner viewfinder-corner-tl" aria-hidden="true"></span>
@@ -92,7 +92,7 @@ require __DIR__ . '/partials/header.php';
             </div>
           </div>
 
-          <div class="verify-panel verify-manual-panel" id="verify-panel-manual" data-verify-panel="manual">
+          <div class="verify-tool-panel verify-manual-panel" id="verify-panel-manual" data-verify-panel="manual">
             <form class="verify-form" action="/verify" method="get" novalidate data-verify-form>
               <div class="form-field verify-number-field">
                 <label for="certificate-number">Certificate number</label>
@@ -106,7 +106,7 @@ require __DIR__ . '/partials/header.php';
         </div>
 
         <div class="verify-aside">
-          <section class="verify-result" data-verify-result aria-live="polite" aria-label="Verification result" hidden></section>
+          <section class="verify-outcome" data-verify-result aria-live="polite" aria-label="Verification result" hidden></section>
 
           <section class="verify-explainer" aria-labelledby="verify-how-title">
             <p class="eyebrow dark"><span></span> How verification works</p>
