@@ -59,10 +59,10 @@
         show('failed', 'Payment not completed', 'The payment could not be completed. You can choose a plan and try again.', payload);
         return true;
       case 'cancelled':
-        show('cancelled', 'Payment cancelled', 'The payment was cancelled. You can choose a plan and try again.', payload);
+        show('cancelled', 'Payment cancelled', 'This order was cancelled, so no payment was taken. You can choose a plan on Pricing and start again.', payload);
         return true;
       case 'expired':
-        show('expired', 'Payment link expired', 'This payment link has expired. Choose a plan to start again.', payload);
+        show('expired', 'Payment not completed in time', 'This order was not paid before its deadline, so the payment link is closed. You can choose a plan on Pricing and start again.', payload);
         return true;
       default:
         show('pending', hinted ? 'Payment not completed' : 'Checking your payment…',
