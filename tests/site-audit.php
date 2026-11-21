@@ -26,11 +26,26 @@ $fetch = static function (string $url): array {
     return [(int) ($match[1] ?? 0), $body === false ? '' : $body];
 };
 
-$pages = ['index.php' => 'Home', 'features.php' => 'Features', 'pricing.php' => 'Pricing', 'contact.php' => 'Contact Us'];
+// Fetch without following redirects and return the status and Location header.
+$fetchNoFollow = static function (string $url): array {
+    $context = stream_context_create(['http' => ['ignore_errors' => true, 'timeout' => 5, 'follow_location' => 0]]);
+    file_get_contents($url, false, $context);
+    $headers = $http_response_header ?? [];
+    preg_match('#\s(\d{3})\s#', $headers[0] ?? '', $match);
+    $location = null;
+    foreach ($headers as $header) {
+        if (stripos($header, 'Location:') === 0) {
+            $location = trim(substr($header, strlen('Location:')));
+        }
+    }
+    return [(int) ($match[1] ?? 0), $location];
+};
+
+$pages = ['/' => 'Home', '/features' => 'Features', '/pricing' => 'Pricing', '/contact' => 'Contact Us'];
 $documents = [];
 
 foreach ($pages as $page => $navLabel) {
-    [$status, $html] = $fetch("{$baseUrl}/{$page}");
+    [$status, $html] = $fetch($baseUrl . $page);
     $assert($status === 200, "{$page} returns 200");
     $document = new DOMDocument();
     @$document->loadHTML('<?xml encoding="UTF-8">' . $html);
@@ -48,13 +63,50 @@ foreach ($pages as $page => $navLabel) {
         && $headerActions->item(0)->getAttribute('href') === 'https://apps.e-certificate.com.my/'
         && trim($headerActions->item(0)->textContent) === 'Sign In', "{$page} header has only the single Sign In button");
     $assert(!str_contains($xpath->query('//header')->item(0)?->textContent ?? '', 'Get Started'), "{$page} header has no Get Started link");
-    $assert($xpath->query('//a[contains(@href, ".html")]')->length === 0, "{$page} links to no .html page");
+    $assert($xpath->query('//a[contains(@href, ".html") or contains(@href, ".php")]')->length === 0, "{$page} links to no .php or .html page");
+
+    $canonical = 'https://www.e-certificate.com.my' . $page;
+    $canonicalLinks = $xpath->query('//head/link[@rel="canonical"]');
+    $ogUrls = $xpath->query('//head/meta[@property="og:url"]');
+    $assert($canonicalLinks->length === 1 && $canonicalLinks->item(0)->getAttribute('href') === $canonical, "{$page} canonical is {$canonical}");
+    $assert($ogUrls->length === 1 && $ogUrls->item(0)->getAttribute('content') === $canonical, "{$page} og:url is {$canonical}");
+
+    foreach ($xpath->query('//link[@href]/@href | //script[@src]/@src') as $asset) {
+        $url = trim($asset->value);
+        if (preg_match('#^https?:#i', $url)) {
+            continue;
+        }
+        $assert(str_starts_with($url, '/') && !str_starts_with($url, '//'), "{$page} local asset {$url} is root-absolute");
+    }
 }
 
-foreach (['partials/head.php', 'partials/header.php', 'partials/footer.php'] as $partial) {
-    [$status, $body] = $fetch("{$baseUrl}/{$partial}");
-    $assert($status === 404 && $body === '', "{$partial} returns an empty 404 when requested directly");
+$denied = [
+    'tests/site-audit.php', 'vendor/autoload.php', 'config/contact.example.php',
+    'partials/head.php', 'partials/header.php', 'partials/footer.php', 'previews/home-desktop.png',
+    'README.md', 'composer.json', 'composer.lock', '.env.example', '.gitignore', '.htaccess', 'router.php',
+];
+foreach ($denied as $deniedPath) {
+    [$status] = $fetchNoFollow("{$baseUrl}/{$deniedPath}");
+    $assert($status === 403, "{$deniedPath} is denied with 403");
 }
+
+$redirects = [
+    '/index.php' => '/',
+    '/index' => '/',
+    '/index.html?x=1' => '/?x=1',
+    '/features.php?a=b' => '/features?a=b',
+    '/pricing.html?type=government' => '/pricing?type=government',
+    '/contact.php?type=normal&duration=6' => '/contact?type=normal&duration=6',
+    '/contact/' => '/contact',
+    '/features/?a=1' => '/features?a=1',
+];
+foreach ($redirects as $from => $to) {
+    [$status, $location] = $fetchNoFollow($baseUrl . $from);
+    $assert($status === 301 && $location === $to, "{$from} redirects with 301 to {$to}");
+}
+
+[$missingStatus] = $fetchNoFollow("{$baseUrl}/nope");
+$assert($missingStatus === 404, '/nope returns 404');
 
 $checkedTargets = [];
 foreach ($documents as $page => $document) {
@@ -78,7 +130,7 @@ foreach ($documents as $page => $document) {
             continue;
         }
         $checkedTargets[$path] = true;
-        [$status] = $fetch("{$baseUrl}/{$path}");
+        [$status] = $fetch($baseUrl . $path);
         $assert($status === 200, "local link target {$path} resolves");
     }
 
@@ -88,7 +140,7 @@ foreach ($documents as $page => $document) {
     }
 }
 
-$pricing = $documents['pricing.php'];
+$pricing = $documents['/pricing'];
 $xpath = new DOMXPath($pricing);
 $expected = [
     'normal:1' => 40,
@@ -115,7 +167,7 @@ foreach ($cards as $card) {
     $approvedPrice = $expected[$key] ?? null;
     $assert($approvedPrice !== null, "plan card {$key} is allowlisted");
     $assert($price === "RM{$approvedPrice}", "plan card {$key} shows exact price");
-    $assert($href === "contact.php?type={$type}&duration={$duration}", "plan card {$key} CTA contains only type and duration");
+    $assert($href === "/contact?type={$type}&duration={$duration}", "plan card {$key} CTA contains only type and duration");
     $seen[$key] = true;
 }
 

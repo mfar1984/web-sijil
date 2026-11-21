@@ -10,16 +10,16 @@ if (!defined('ECERT_PAGE')) {
 $ecertEscape = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 $ecertActiveNav = (string) ($ecertPage['nav'] ?? '');
 $ecertNavItems = [
-    'home' => ['Home', 'index.php'],
-    'features' => ['Features', 'features.php'],
-    'pricing' => ['Pricing', 'pricing.php'],
+    'home' => ['Home', '/'],
+    'features' => ['Features', '/features'],
+    'pricing' => ['Pricing', '/pricing'],
     'verify' => ['Verify Certificate', 'https://apps.e-certificate.com.my/verify'],
-    'contact' => ['Contact Us', 'contact.php'],
+    'contact' => ['Contact Us', '/contact'],
 ];
 ?>
   <header class="site-header" data-header>
     <div class="header-inner">
-      <a class="brand" href="index.php" aria-label="e-Certificate home">
+      <a class="brand" href="/" aria-label="e-Certificate home">
         <svg class="brand-mark" viewBox="0 0 36 36" aria-hidden="true">
           <path d="M18 2.5 31 10v16L18 33.5 5 26V10L18 2.5Z" fill="currentColor" opacity=".18"/>
           <path d="m9 12 9-5.2 9 5.2-9 5.2L9 12Zm0 5.9 9 5.2 9-5.2v5.9L18 29l-9-5.2v-5.9Z" fill="currentColor"/>

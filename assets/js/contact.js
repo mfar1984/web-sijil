@@ -92,7 +92,7 @@
     if (!valid || !summary) return;
 
     planRequest = new AbortController();
-    const request = new URL('api/plan.php', window.location.href);
+    const request = new URL('/api/plan.php', window.location.href);
     request.searchParams.set('type', type);
     request.searchParams.set('duration', duration);
 

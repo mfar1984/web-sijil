@@ -4,18 +4,20 @@ Standalone marketing site for e-Certificate. The site uses PHP pages with shared
 
 ## Pages and routes
 
-- `index.php`: Home, including the three-slide hero and static workflow.
-- `features.php`: verified product capabilities.
-- `pricing.php`: Normal and Government pricing tabs.
-- `contact.php`: enquiry form and optional plan prefill.
+Pages are served at clean URLs without a file extension:
+
+- `/` (`index.php`): Home, including the three-slide hero and static workflow.
+- `/features` (`features.php`): verified product capabilities.
+- `/pricing` (`pricing.php`): Normal and Government pricing tabs.
+- `/contact` (`contact.php`): enquiry form and optional plan prefill.
 - `api/plan.php`: resolves an allowlisted plan and returns its server-derived price.
 - `api/contact.php`: validates and sends same-origin contact submissions.
 
-The pages share one copy of the document head, header and footer in `partials/head.php`, `partials/header.php` and `partials/footer.php`. Each page defines `ECERT_PAGE` and a `$ecertPage` array (title, meta description, optional Open Graph data, active navigation key, body class and page scripts) before including them. A partial requested directly returns an empty `404`. Partials escape every printed value and the pages never echo query-string input.
+The pages share one copy of the document head, header and footer in `partials/head.php`, `partials/header.php` and `partials/footer.php`. Each page defines `ECERT_PAGE` and a `$ecertPage` array (title, meta description, optional Open Graph data, active navigation key, clean `path`, body class and page scripts) before including them. The head prints `<link rel="canonical">` and `og:url` as `https://www.e-certificate.com.my` plus the page path. The `partials/` directory is denied with `403`; a partial executed directly without `ECERT_PAGE` also returns an empty `404`. Partials escape every printed value and the pages never echo query-string input.
 
-The former `index.html`, `features.html`, `pricing.html` and `contact.html` URLs redirect with `301` to the `.php` page, keeping the query string, through `.htaccess`.
+`.htaccess` serves `/<page>` from `<page>.php` internally and redirects with `301`, keeping the query string: `/index`, `/index.php`, `/index.html` and `/index/` to `/`; `/<page>.php`, the former `/<page>.html` and `/<page>/` to `/<page>`; and the apex `e-certificate.com.my` to `https://www.e-certificate.com.my`. Every link, asset and endpoint uses a root-absolute URL (`/pricing`, `/assets/css/styles.css`, `/api/plan.php`). The JSON endpoints under `/api/` keep their `.php` names.
 
-Primary navigation uses standalone page routes. Public verification points to `https://apps.e-certificate.com.my/verify`, and Sign In points to `https://apps.e-certificate.com.my/`.
+Primary navigation uses standalone clean page routes. Public verification points to `https://apps.e-certificate.com.my/verify`, and Sign In points to `https://apps.e-certificate.com.my/`.
 
 ## Plan catalog and current flow
 
@@ -32,7 +34,7 @@ Primary navigation uses standalone page routes. Public verification points to `h
 | `government-06m` | Government | 6 months | RM100 |
 | `government-12m` | Government | 1 year | RM200 |
 
-Choose Plan currently routes to `contact.php` with only `type` and `duration`. The browser and Contact endpoint resolve the price from the catalog; they never accept a client-supplied price.
+Choose Plan currently routes to `/contact` with only `type` and `duration`. The browser and Contact endpoint resolve the price from the catalog; they never accept a client-supplied price.
 
 ### Future CHIP integration boundary
 
@@ -47,12 +49,12 @@ cd f:\Programming\certificate\web2
 composer install --no-dev --optimize-autoloader
 $env:ECERT_RATE_LIMIT_DIR = Join-Path $env:TEMP 'ecert-contact-rate-limit'
 $env:ECERT_ALLOWED_ORIGIN = 'http://127.0.0.1:4173'
-php -S 127.0.0.1:4173 -t f:\Programming\certificate\web2
+php -S 127.0.0.1:4173 -t f:\Programming\certificate\web2 f:\Programming\certificate\web2\router.php
 ```
 
-Open `http://127.0.0.1:4173/index.php`. Use `Ctrl+C` to stop the server.
+Open `http://127.0.0.1:4173/`. Use `Ctrl+C` to stop the server.
 
-The `.php` pages cannot be previewed by opening `file:///…` in a browser: the browser would show raw PHP instead of the page. Always preview through a PHP server such as the command above. PHP's built-in server ignores `.htaccess`, so the `.html` redirects and the denied paths only apply on Apache or LiteSpeed. Locally, a missing path such as `/pricing.html` falls back to `index.php` instead of redirecting. A PHP-capable server is also required for plan prefills and contact responses. Keep `ECERT_ALLOWED_ORIGIN` equal to the exact local origin used in the browser and endpoint test; setting it explicitly also keeps local verification consistent across PHP platforms.
+The pages cannot be previewed by opening `file:///…` in a browser: the browser would show raw PHP, and root-absolute links such as `/pricing` would point at the filesystem root. Always preview through a PHP server such as the command above. PHP's built-in server ignores `.htaccess`, so `router.php` mirrors its rules in the same order (denied paths, apex redirect, `301`s, clean URLs, `404` for unknown paths). Pass `router.php` as the last argument, otherwise clean URLs do not resolve locally. `router.php` returns `404` when it runs under anything other than the `cli-server` SAPI, and `.htaccess` denies it with `403` in production. A PHP-capable server is also required for plan prefills and contact responses. Keep `ECERT_ALLOWED_ORIGIN` equal to the exact local origin used in the browser and endpoint test; setting it explicitly also keeps local verification consistent across PHP platforms.
 
 Without a private SMTP credential, a valid Contact submission intentionally returns a generic `503` response. This is the expected safe local behavior and is not evidence of live email delivery.
 
@@ -81,21 +83,24 @@ Without a private SMTP credential, a valid Contact submission intentionally retu
    - `starttls` uses explicit STARTTLS on port 587 and is the default.
    - `smtps` uses implicit TLS on port 465.
 8. Confirm that PHP can read `vendor/autoload.php`, the private credential source, and the rate directory. Keep the private credential file unreadable to other hosting accounts.
-9. Confirm the `.htaccess` rules from a terminal, replacing the origin with the deployed one. Each denied path must return `403` or `404`, and each `.html` URL must return `301` with a `Location` ending in the `.php` page and the same query string:
+9. Confirm the `.htaccess` rules from a terminal, replacing the origin with the deployed one. Each denied path, including `router.php`, must return `403`. Each `.php`, `.html` and trailing-slash URL must return `301` with a `Location` ending in the clean URL and the same query string. The apex host must return `301` to `www`:
 
    ```bash
-   origin=https://www.example.com
-   for path in tests/site-audit.php vendor/autoload.php config/contact.example.php partials/header.php previews/home-desktop.png README.md composer.json composer.lock .env.example .gitignore .htaccess; do
+   origin=https://www.e-certificate.com.my
+   for path in tests/site-audit.php vendor/autoload.php config/contact.example.php partials/header.php previews/home-desktop.png README.md composer.json composer.lock .env.example .gitignore .htaccess router.php; do
      printf '%s ' "$path"; curl -s -o /dev/null -w '%{http_code}\n' "$origin/$path"
    done
-   for page in index features pricing contact; do
-     curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' "$origin/$page.html?type=government"
+   for page in / /features /pricing /contact; do
+     printf '%s ' "$page"; curl -s -o /dev/null -w '%{http_code}\n' "$origin$page"
    done
-   curl -s -o /dev/null -w '%{http_code}\n' "$origin/"
+   for path in index.php index.html features.php pricing.html contact.php contact/; do
+     curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' "$origin/$path?type=government"
+   done
+   curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' "https://e-certificate.com.my/pricing?type=government"
    curl -s -o /dev/null -w '%{http_code}\n' "$origin/api/plan.php?type=government&duration=12"
    ```
 
-   The last two commands must return `200`: `/` serves `index.php`, and `api/` stays public.
+   The four clean pages and the last command must return `200`: `/api/` stays public and keeps its `.php` names.
 
 The endpoint uses the fixed SMTP host `indigo.herosite.pro` and the fixed username, From address, and destination `support@e-certificate.com.my`. PHPMailer runs with production debug output off, verifies the TLS peer and hostname, disallows self-signed certificates, and reports no exception or configuration detail to the browser.
 
@@ -118,7 +123,7 @@ Start one server in PowerShell and keep the rate directory outside the site:
 cd f:\Programming\certificate\web2
 $env:ECERT_RATE_LIMIT_DIR = Join-Path $env:TEMP 'ecert-contact-rate-limit'
 $env:ECERT_ALLOWED_ORIGIN = 'http://127.0.0.1:4173'
-$server = Start-Process php -ArgumentList '-S','127.0.0.1:4173','-t','f:\Programming\certificate\web2' -PassThru
+$server = Start-Process php -ArgumentList '-S','127.0.0.1:4173','-t','f:\Programming\certificate\web2','f:\Programming\certificate\web2\router.php' -PassThru
 ```
 
 Run the non-live checks once:
@@ -127,6 +132,7 @@ Run the non-live checks once:
 php tests/site-audit.php http://127.0.0.1:4173
 php tests/plan-catalog-test.php
 powershell -ExecutionPolicy Bypass -File tests/contact-endpoint.ps1 -BaseUrl http://127.0.0.1:4173
+php -l router.php
 php -l index.php
 php -l features.php
 php -l pricing.php
@@ -152,7 +158,7 @@ Remove-Item Env:ECERT_RATE_LIMIT_DIR
 Remove-Item Env:ECERT_ALLOWED_ORIGIN
 ```
 
-Browser QA uses installed Chrome at widths 1440, 1024, 768, 390, and 320. Check all four `.php` pages for horizontal overflow, a 12px rendered-text floor, keyboard focus visibility, primary destinations, one `aria-current="page"`, and a header with only the single Sign In button. The site audit also checks that each partial returns an empty `404` when requested directly. Also check:
+Browser QA uses installed Chrome at widths 1440, 1024, 768, 390, and 320. Check all four pages (`/`, `/features`, `/pricing`, `/contact`) for horizontal overflow, a 12px rendered-text floor, keyboard focus visibility, primary destinations, one `aria-current="page"`, and a header with only the single Sign In button. The site audit also checks canonical and `og:url`, root-absolute assets, the `301` redirects, that private paths, partials and `router.php` return `403`, and that an unknown path returns `404`. Also check:
 
 - Home: three slides, Pause/Play, Left/Right keys when the carousel itself has focus, horizontal swipe, autoplay pause after manual input, reduced-motion behavior, and the static middle workflow.
 - Pricing: pointer selection, Left/Right/Home/End, `type=normal|government` deep links, rejected extra query values, exact prices, and both groups visible with JavaScript disabled.

@@ -150,7 +150,7 @@ try {
         $env:ECERT_CONTACT_CONFIG = $throwingConfig
         $env:ECERT_RATE_LIMIT_DIR = $throwingRateDirectory
         $env:ECERT_ALLOWED_ORIGIN = $throwingBaseUrl
-        $throwingServer = Start-Process -FilePath 'php' -ArgumentList @('-S', "127.0.0.1:$throwingPort", '-t', $documentRoot) -PassThru -WindowStyle Hidden
+        $throwingServer = Start-Process -FilePath 'php' -ArgumentList @('-S', "127.0.0.1:$throwingPort", '-t', $documentRoot, (Join-Path $documentRoot 'router.php')) -PassThru -WindowStyle Hidden
 
         $ready = $false
         1..40 | ForEach-Object {

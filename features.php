@@ -12,6 +12,7 @@ $ecertPage = [
         'description' => 'A connected workspace for designing, issuing, delivering and verifying digital certificates.',
     ],
     'nav' => 'features',
+    'path' => '/features',
     'bodyClass' => 'inner-page',
     'scripts' => [],
 ];
@@ -28,8 +29,8 @@ require __DIR__ . '/partials/header.php';
           <h1 id="page-title">One clear path from <em>design to proof.</em></h1>
           <p>e-Certificate connects the practical work behind each award: prepare the template, organise recipients, issue certificates and make the result easy to verify.</p>
           <div class="page-hero-actions">
-            <a class="button" href="pricing.php">View Pricing <span aria-hidden="true">↗</span></a>
-            <a class="button button-secondary" href="contact.php">Talk to Us</a>
+            <a class="button" href="/pricing">View Pricing <span aria-hidden="true">↗</span></a>
+            <a class="button button-secondary" href="/contact">Talk to Us</a>
           </div>
         </div>
         <ol class="capability-index" aria-label="Feature areas">
@@ -148,7 +149,7 @@ require __DIR__ . '/partials/header.php';
     <section class="feature-next" aria-labelledby="next-title">
       <div class="container feature-next-grid">
         <div><p class="eyebrow dark"><span></span> Plan your next programme</p><h2 id="next-title">Choose the next step for your team.</h2></div>
-        <div class="feature-next-actions"><a class="button" href="pricing.php">View Pricing</a><a class="button feature-outline-button" href="contact.php">Contact Us</a></div>
+        <div class="feature-next-actions"><a class="button" href="/pricing">View Pricing</a><a class="button feature-outline-button" href="/contact">Contact Us</a></div>
       </div>
     </section>
   </main>

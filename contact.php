@@ -9,8 +9,9 @@ $ecertPage = [
     'description' => 'Contact the e-Certificate team about digital certificate management for your organisation.',
     'og' => null,
     'nav' => 'contact',
+    'path' => '/contact',
     'bodyClass' => 'inner-page',
-    'scripts' => ['assets/js/contact.js'],
+    'scripts' => ['/assets/js/contact.js'],
 ];
 
 require __DIR__ . '/partials/head.php';
@@ -46,11 +47,11 @@ require __DIR__ . '/partials/header.php';
               <div><dt>Price</dt><dd data-plan-price></dd></div>
             </dl>
             <p>The displayed price is confirmed from the e-Certificate plan catalog.</p>
-            <a class="selected-plan-change" href="pricing.php">Change plan</a>
+            <a class="selected-plan-change" href="/pricing">Change plan</a>
           </aside>
         </div>
 
-        <form class="contact-form" action="api/contact.php" method="post" enctype="application/x-www-form-urlencoded" data-contact-form>
+        <form class="contact-form" action="/api/contact.php" method="post" enctype="application/x-www-form-urlencoded" data-contact-form>
           <div class="form-heading">
             <p class="form-step">Enquiry details</p>
             <p>Fields marked <span aria-hidden="true">*</span><span class="visually-hidden">required</span> are required.</p>

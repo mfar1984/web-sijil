@@ -12,6 +12,7 @@ $ecertPage = [
         'description' => 'A focused certificate workflow for events, training and education, from participant import to public verification.',
     ],
     'nav' => 'home',
+    'path' => '/',
     'bodyClass' => '',
     'scripts' => [],
 ];
@@ -32,7 +33,7 @@ require __DIR__ . '/partials/header.php';
                 <p class="eyebrow"><span></span> Certificate operations, brought together</p>
                 <h1 id="hero-title">Issue every certificate with <em>confidence.</em></h1>
                 <p class="hero-lead">Design, generate and deliver digital certificates from one organised workspace, with public verification built into every award.</p>
-                <div class="hero-actions"><a class="button" href="contact.php">Get Started <span aria-hidden="true">↗</span></a><a class="button button-secondary" href="features.php">Explore Features</a></div>
+                <div class="hero-actions"><a class="button" href="/contact">Get Started <span aria-hidden="true">↗</span></a><a class="button button-secondary" href="/features">Explore Features</a></div>
                 <ul class="hero-points" aria-label="Key capabilities"><li><span aria-hidden="true">✓</span> Bulk participant import</li><li><span aria-hidden="true">✓</span> PDF generation</li><li><span aria-hidden="true">✓</span> Email delivery</li></ul>
               </div>
               <div class="product-stage issue-stage" aria-label="Illustration of certificate issuing workspace">
@@ -53,7 +54,7 @@ require __DIR__ . '/partials/header.php';
                 <p class="eyebrow"><span></span> Connected programme records</p>
                 <h2>From attendance to certificate, <em>connected.</em></h2>
                 <p class="hero-lead">Keep participant and attendance records connected to certificate creation, so your team can move from check-in to prepared awards in one system.</p>
-                <div class="hero-actions"><a class="button" href="#workflow">See How It Works <span aria-hidden="true">↓</span></a><a class="button button-secondary" href="contact.php">Talk to Us</a></div>
+                <div class="hero-actions"><a class="button" href="#workflow">See How It Works <span aria-hidden="true">↓</span></a><a class="button button-secondary" href="/contact">Talk to Us</a></div>
                 <ul class="hero-points" aria-label="Attendance workflow capabilities"><li><span aria-hidden="true">✓</span> QR attendance</li><li><span aria-hidden="true">✓</span> Participant records</li><li><span aria-hidden="true">✓</span> Bulk certificates</li></ul>
               </div>
               <div class="product-stage attendance-stage" aria-label="Illustration of attendance records moving into certificate preparation">
@@ -265,7 +266,7 @@ require __DIR__ . '/partials/header.php';
         </div>
         <div class="pricing-action">
           <span>Normal and Government plan options</span>
-          <a class="button button-cyan" href="pricing.php">View Pricing <span aria-hidden="true">↗</span></a>
+          <a class="button button-cyan" href="/pricing">View Pricing <span aria-hidden="true">↗</span></a>
           <small>Compare the available plan durations and prices.</small>
         </div>
       </div>
@@ -278,7 +279,7 @@ require __DIR__ . '/partials/header.php';
         <h2 id="contact-title">Turn certificate day into<br><em>a confident workflow.</em></h2>
         <p>Tell us how your organisation creates, distributes and verifies certificates today.</p>
         <div class="cta-actions">
-          <a class="button button-light" href="contact.php">Start a conversation <span aria-hidden="true">↗</span></a>
+          <a class="button button-light" href="/contact">Start a conversation <span aria-hidden="true">↗</span></a>
           <a class="plain-link" href="https://apps.e-certificate.com.my/">Already have an account? <strong>Sign in</strong></a>
         </div>
       </div>

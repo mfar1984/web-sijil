@@ -1,24 +1,44 @@
 # e-Certificate marketing site: Apache 2.4 / LiteSpeed (cPanel) rules.
-# PHP's built-in development server ignores this file.
-
+# PHP's built-in development server ignores this file; router.php mirrors
+# these rules in the same order for local previews (php -S ... router.php).
 DirectoryIndex index.php
-Options -Indexes
-
+# -MultiViews stops content negotiation from serving /features as features.php
+# on its own, so only the explicit rewrite below maps clean URLs to pages.
+Options -Indexes -MultiViews
 # mod_rewrite is intentionally not wrapped in <IfModule>: if it is missing the
 # server fails closed with a 500 instead of silently exposing private paths.
 RewriteEngine On
-
 # Deny non-public directories (403), including the bare directory name.
 RewriteRule ^(?:tests|vendor|config|partials|previews)(?:/|$) - [F,L]
-
-# Deny project and environment files at the site root (403).
-RewriteRule ^(?:README\.md|composer\.(?:json|lock)|\.env.*|\.gitignore|\.htaccess)$ - [F,L]
-
-# Retired static pages: 301 to the PHP equivalent in the same directory.
-# The query string is kept because the substitution has no "?" and no QSD flag.
-RewriteCond %{REQUEST_URI} ^(.*/)(?:index|features|pricing|contact)\.html$
-RewriteRule ^(index|features|pricing|contact)\.html$ %1$1.php [R=301,L]
-
+# Deny project and environment files at the site root (403). router.php is
+# only for the local PHP development server and is never served here.
+RewriteRule ^(?:README\.md|composer\.(?:json|lock)|\.env.*|\.gitignore|\.htaccess|router\.php)$ - [F,L]
+# Apex domain: 301 to www, keeping path and query. The condition only matches
+# the exact apex host, so local hosts such as 127.0.0.1 are never redirected.
+RewriteCond %{HTTP_HOST} ^e-certificate\.com\.my$ [NC]
+RewriteRule ^ https://www.e-certificate.com.my%{REQUEST_URI} [R=301,L]
+# The 301s below are guarded by %{THE_REQUEST} (the original request line), so
+# they only fire for what the browser asked for, never for the internal
+# rewrite of /features to features.php further down. That prevents a loop.
+# None of the substitutions contain "?" and none use QSD, so Apache appends
+# the original query string to every redirect target.
+# /index, /index.php, /index.html and /index/ -> /
+RewriteCond %{THE_REQUEST} ^[A-Z]+\s/index(?:\.php|\.html)?/?(?:[?\s])
+RewriteRule ^index(?:\.php|\.html)?/?$ / [R=301,L]
+# /<page>.php -> /<page>. /verify.php also covers the legacy www verify
+# endpoint, so old links land on the clean /verify URL.
+RewriteCond %{THE_REQUEST} ^[A-Z]+\s/(?:features|pricing|contact|verify)\.php(?:[?\s])
+RewriteRule ^(features|pricing|contact|verify)\.php$ /$1 [R=301,L]
+# Retired static pages: /<page>.html -> /<page>.
+RewriteCond %{THE_REQUEST} ^[A-Z]+\s/(?:features|pricing|contact)\.html(?:[?\s])
+RewriteRule ^(features|pricing|contact)\.html$ /$1 [R=301,L]
+# Trailing slash: /<page>/ -> /<page>.
+RewriteCond %{THE_REQUEST} ^[A-Z]+\s/(?:features|pricing|contact|verify)/(?:[?\s])
+RewriteRule ^(features|pricing|contact|verify)/$ /$1 [R=301,L]
+# Clean URL: serve /<page> from <page>.php internally when the file exists.
+# Only these page names are rewritten, so /api/*.php and /assets/* are untouched.
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(features|pricing|contact|verify)$ $1.php [L]
 # Second layer for the same private files in any directory, without mod_rewrite.
 <FilesMatch "^(?:README\.md|composer\.(?:json|lock)|\.env.*|\.gitignore|\.htaccess)$">
     Require all denied
