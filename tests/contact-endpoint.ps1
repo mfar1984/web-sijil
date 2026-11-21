@@ -184,6 +184,80 @@ try {
         }
     }
 
+    # Private settings file (cPanel): origins and rate directory come only from
+    # the file named by ECERT_CONTACT_CONFIG, with the matching env vars unset.
+    $privateRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('ecert-contact-private-test-' + [Guid]::NewGuid().ToString('N'))
+    $privateConfig = Join-Path $privateRoot 'e-certificate-web.php'
+    $privateRateDirectory = Join-Path $privateRoot 'rate'
+    $privateOrigins = @('https://www.e-certificate.com.my', 'https://e-certificate.com.my')
+    $privateServer = $null
+    $previousConfig = $env:ECERT_CONTACT_CONFIG
+    $previousRateDirectory = $env:ECERT_RATE_LIMIT_DIR
+    $previousOrigin = $env:ECERT_ALLOWED_ORIGIN
+    $previousPassword = $env:ECERT_SMTP_PASSWORD
+    $previousMode = $env:ECERT_SMTP_MODE
+    try {
+        New-Item -ItemType Directory -Path $privateRateDirectory -Force | Out-Null
+        $phpRateDirectory = $privateRateDirectory.Replace('\', '\\').Replace("'", "\'")
+        [System.IO.File]::WriteAllText(
+            $privateConfig,
+            "<?php`nreturn [`n    'smtp_password' => '<SMTP_PASSWORD>',`n    'allowed_origins' => ['$($privateOrigins[0])', '$($privateOrigins[1])'],`n    'rate_limit_dir' => '$phpRateDirectory',`n    'smtp_mode' => 'starttls',`n];`n",
+            [System.Text.UTF8Encoding]::new($false)
+        )
+        $privatePort = Get-FreeTcpPort
+        $privateBaseUrl = "http://127.0.0.1:$privatePort"
+        $documentRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+        $env:ECERT_CONTACT_CONFIG = $privateConfig
+        $env:ECERT_RATE_LIMIT_DIR = $null
+        $env:ECERT_ALLOWED_ORIGIN = $null
+        $env:ECERT_SMTP_PASSWORD = $null
+        $env:ECERT_SMTP_MODE = $null
+        $privateServer = Start-Process -FilePath 'php' -ArgumentList @('-S', "127.0.0.1:$privatePort", '-t', $documentRoot, (Join-Path $documentRoot 'router.php')) -PassThru -WindowStyle Hidden
+
+        $ready = $false
+        1..40 | ForEach-Object {
+            if ($ready) { return }
+            Start-Sleep -Milliseconds 100
+            try {
+                $probe = Send-Request -Method 'GET' -Origin $privateOrigins[0] -EndpointBaseUrl $privateBaseUrl
+                $ready = $probe.Status -eq 405
+            } catch {
+                $ready = $false
+            }
+        }
+        Assert-Result $ready 'private-config server becomes ready'
+        if ($ready) {
+            foreach ($origin in $privateOrigins) {
+                $privateResponse = Send-Request -Method 'POST' -Body ((Form-Body) + '&unsupported=1') -Origin $origin -EndpointBaseUrl $privateBaseUrl
+                $privatePayload = $privateResponse.Body | ConvertFrom-Json
+                Assert-Result ($privateResponse.Status -eq 422 -and $privatePayload.message -eq 'Please check the highlighted fields.') "private config allows listed origin $origin"
+            }
+            foreach ($origin in @('https://cross-origin.example', $privateBaseUrl)) {
+                $privateResponse = Send-Request -Method 'POST' -Body ((Form-Body) + '&unsupported=1') -Origin $origin -EndpointBaseUrl $privateBaseUrl
+                $privatePayload = $privateResponse.Body | ConvertFrom-Json
+                Assert-Result ($privateResponse.Status -eq 422 -and $privatePayload.message -eq 'The submitted form could not be accepted.') "private config rejects unlisted origin $origin"
+            }
+            $privateResponse = Send-Request -Method 'POST' -Body (Form-Body) -Origin $privateOrigins[1] -EndpointBaseUrl $privateBaseUrl
+            $privatePayload = $privateResponse.Body | ConvertFrom-Json
+            Assert-Result ($privateResponse.Status -eq 503 -and $privatePayload.success -eq $false -and $privatePayload.message -eq 'The enquiry service is temporarily unavailable.') 'private config placeholder password returns generic JSON 503'
+            Assert-SafeBody $privateResponse 'private config 503 reveals no internals or credential data'
+            Assert-Result (Test-Path -LiteralPath (Join-Path $privateRateDirectory 'contact-rate.json')) 'private config rate_limit_dir holds the rate state'
+        }
+    } finally {
+        if ($null -ne $privateServer -and !$privateServer.HasExited) {
+            Stop-Process -Id $privateServer.Id -Force
+            $privateServer.WaitForExit()
+        }
+        $env:ECERT_CONTACT_CONFIG = $previousConfig
+        $env:ECERT_RATE_LIMIT_DIR = $previousRateDirectory
+        $env:ECERT_ALLOWED_ORIGIN = $previousOrigin
+        $env:ECERT_SMTP_PASSWORD = $previousPassword
+        $env:ECERT_SMTP_MODE = $previousMode
+        if (Test-Path -LiteralPath $privateRoot) {
+            Remove-Item -LiteralPath $privateRoot -Recurse -Force
+        }
+    }
+
     Remove-Item -LiteralPath $rateDirectory -Recurse -Force
     New-Item -ItemType Directory -Path $rateDirectory -Force | Out-Null
     1..5 | ForEach-Object {

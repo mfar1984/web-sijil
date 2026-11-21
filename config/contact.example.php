@@ -2,7 +2,16 @@
 
 declare(strict_types=1);
 
-// Copy this file outside the public document root and restrict its permissions.
+// Private settings for https://www.e-certificate.com.my (api/contact.php).
+// Template only: copy it to /home/kflegacy/private/e-certificate-web.php, which
+// lives outside every document root. Permissions 600 for the file and 700 for
+// /home/kflegacy/private. Never commit, upload or copy the filled-in file.
 return [
-    'smtp_password' => '<SMTP_PASSWORD>',
+    'smtp_password'   => '<SMTP_PASSWORD>',   // mailbox password of support@e-certificate.com.my
+    'allowed_origins' => [
+        'https://www.e-certificate.com.my',
+        'https://e-certificate.com.my',
+    ],
+    'rate_limit_dir'  => '/home/kflegacy/private/ecert-contact-rate-limit',
+    'smtp_mode'       => 'starttls',           // 'smtps' switches to port 465
 ];

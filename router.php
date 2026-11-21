@@ -44,6 +44,12 @@ if ($ecertPath === '' || $ecertPath[0] !== '/' || str_contains($ecertPath, '..')
 // Path relative to the document root, like the per-directory RewriteRule subject.
 $ecertRelative = substr($ecertPath, 1);
 
+// Deny the git metadata (403): the production document root is a git clone.
+if (preg_match('#^\.git(?:/|$)#i', $ecertRelative) === 1) {
+    $ecertStatus(403, 'Forbidden');
+    return true;
+}
+
 // Deny non-public directories (403), including the bare directory name.
 if (preg_match('#^(?:tests|vendor|config|partials|previews)(?:/|$)#i', $ecertRelative) === 1) {
     $ecertStatus(403, 'Forbidden');
@@ -51,13 +57,13 @@ if (preg_match('#^(?:tests|vendor|config|partials|previews)(?:/|$)#i', $ecertRel
 }
 
 // Deny project and environment files at the site root (403), including this router.
-if (preg_match('#^(?:README\.md|composer\.(?:json|lock)|\.env.*|\.gitignore|\.htaccess|router\.php)$#i', $ecertRelative) === 1) {
+if (preg_match('#^(?:README\.md|composer\.(?:json|lock)|\.env.*|\.git(?:ignore|attributes)|\.htaccess|error_log|router\.php)$#i', $ecertRelative) === 1) {
     $ecertStatus(403, 'Forbidden');
     return true;
 }
 
 // FilesMatch layer: the same private file names in any directory.
-if (preg_match('#^(?:README\.md|composer\.(?:json|lock)|\.env.*|\.gitignore|\.htaccess)$#i', basename($ecertPath)) === 1) {
+if (preg_match('#^(?:README\.md|composer\.(?:json|lock)|\.env.*|\.git(?:ignore|attributes)|\.htaccess|error_log)$#i', basename($ecertPath)) === 1) {
     $ecertStatus(403, 'Forbidden');
     return true;
 }

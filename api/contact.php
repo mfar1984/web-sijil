@@ -52,21 +52,97 @@ function ecert_normalize_origin(string $origin): ?string
     return $normalized;
 }
 
-function ecert_expected_origin(): ?string
+function ecert_path_is_inside(string $path, string $parent): bool
+{
+    $path = rtrim(str_replace('\\', '/', strtolower($path)), '/') . '/';
+    $parent = rtrim(str_replace('\\', '/', strtolower($parent)), '/') . '/';
+    return str_starts_with($path, $parent);
+}
+
+// Private settings file outside the document root. ECERT_CONTACT_CONFIG wins;
+// otherwise <account home>/private/e-certificate-web.php, which on cPanel is
+// /home/kflegacy/private/e-certificate-web.php (api/ -> site root -> home).
+function ecert_private_config(): array
+{
+    static $config = null;
+    if (is_array($config)) {
+        return $config;
+    }
+    $config = [];
+
+    $configPath = getenv('ECERT_CONTACT_CONFIG');
+    if (!is_string($configPath) || $configPath === '') {
+        $configPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'private' . DIRECTORY_SEPARATOR . 'e-certificate-web.php';
+    }
+    $resolvedPath = realpath($configPath);
+    $documentRoot = realpath((string) ($_SERVER['DOCUMENT_ROOT'] ?? ''));
+    if ($resolvedPath === false || !is_file($resolvedPath) || !is_readable($resolvedPath)
+        || ($documentRoot !== false && ecert_path_is_inside($resolvedPath, $documentRoot))) {
+        return $config;
+    }
+
+    try {
+        $loaded = (static function (string $path): mixed {
+            return require $path;
+        })($resolvedPath);
+    } catch (Throwable) {
+        return $config;
+    }
+    if (is_array($loaded)) {
+        $config = $loaded;
+    }
+    return $config;
+}
+
+// Normalizes a comma-separated string or a list of origins. Any invalid entry,
+// or no entry at all, fails closed with an empty list.
+function ecert_normalize_origin_list(mixed $origins): array
+{
+    if (is_string($origins)) {
+        $origins = explode(',', $origins);
+    }
+    if (!is_array($origins)) {
+        return [];
+    }
+
+    $normalized = [];
+    foreach ($origins as $origin) {
+        if (!is_string($origin)) {
+            return [];
+        }
+        $origin = trim($origin);
+        if ($origin === '') {
+            continue;
+        }
+        $value = ecert_normalize_origin($origin);
+        if ($value === null) {
+            return [];
+        }
+        $normalized[] = $value;
+    }
+    return array_values(array_unique($normalized));
+}
+
+function ecert_allowed_origins(): array
 {
     $configured = getenv('ECERT_ALLOWED_ORIGIN');
     if (is_string($configured) && $configured !== '') {
-        return ecert_normalize_origin($configured);
+        return ecert_normalize_origin_list($configured);
+    }
+
+    $config = ecert_private_config();
+    if (array_key_exists('allowed_origins', $config)) {
+        return ecert_normalize_origin_list($config['allowed_origins']);
     }
 
     $serverAddress = $_SERVER['SERVER_ADDR'] ?? '';
     $host = $_SERVER['HTTP_HOST'] ?? '';
     if (!in_array($serverAddress, ['127.0.0.1', '::1'], true)
         || !preg_match('/^(?:127\.0\.0\.1|localhost)(?::\d{1,5})?$/D', $host)) {
-        return null;
+        return [];
     }
 
-    return 'http://' . strtolower($host);
+    return ['http://' . strtolower($host)];
 }
 
 function ecert_parse_form_body(string $body): ?array
@@ -184,16 +260,12 @@ function ecert_validate_contact(array $input): array
     return [$values, []];
 }
 
-function ecert_path_is_inside(string $path, string $parent): bool
-{
-    $path = rtrim(str_replace('\\', '/', strtolower($path)), '/') . '/';
-    $parent = rtrim(str_replace('\\', '/', strtolower($parent)), '/') . '/';
-    return str_starts_with($path, $parent);
-}
-
 function ecert_rate_directory(): ?string
 {
     $directory = getenv('ECERT_RATE_LIMIT_DIR');
+    if (!is_string($directory) || $directory === '') {
+        $directory = ecert_private_config()['rate_limit_dir'] ?? null;
+    }
     if (!is_string($directory) || $directory === '') {
         $serverAddress = $_SERVER['SERVER_ADDR'] ?? '';
         if (!in_array($serverAddress, ['127.0.0.1', '::1'], true)) {
@@ -291,24 +363,7 @@ function ecert_load_smtp_password(): ?string
         return $password;
     }
 
-    $configPath = getenv('ECERT_CONTACT_CONFIG');
-    if (!is_string($configPath) || $configPath === '') {
-        return null;
-    }
-    $resolvedPath = realpath($configPath);
-    $documentRoot = realpath((string) ($_SERVER['DOCUMENT_ROOT'] ?? ''));
-    if ($resolvedPath === false || !is_file($resolvedPath) || !is_readable($resolvedPath)
-        || ($documentRoot !== false && ecert_path_is_inside($resolvedPath, $documentRoot))) {
-        return null;
-    }
-
-    $config = (static function (string $path): mixed {
-        return require $path;
-    })($resolvedPath);
-    if (!is_array($config)) {
-        return null;
-    }
-    $password = $config['smtp_password'] ?? null;
+    $password = ecert_private_config()['smtp_password'] ?? null;
     return is_string($password) && $password !== '' && $password !== '<SMTP_PASSWORD>' ? $password : null;
 }
 
@@ -332,12 +387,20 @@ if ($contentLength !== false && $contentLength > ECERT_MAX_REQUEST_BYTES) {
     ecert_contact_fail(422, 'The submitted form is too large.');
 }
 
-$expectedOrigin = ecert_expected_origin();
+$allowedOrigins = ecert_allowed_origins();
 $requestOrigin = ecert_normalize_origin((string) ($_SERVER['HTTP_ORIGIN'] ?? ''));
-if ($expectedOrigin === null) {
+if ($allowedOrigins === []) {
     ecert_contact_fail(503, 'The enquiry service is temporarily unavailable.');
 }
-if ($requestOrigin === null || !hash_equals($expectedOrigin, $requestOrigin)) {
+$originAllowed = false;
+if ($requestOrigin !== null) {
+    foreach ($allowedOrigins as $allowedOrigin) {
+        if (hash_equals($allowedOrigin, $requestOrigin)) {
+            $originAllowed = true;
+        }
+    }
+}
+if (!$originAllowed) {
     ecert_contact_fail(422, 'The submitted form could not be accepted.');
 }
 
@@ -384,7 +447,11 @@ try {
     ecert_contact_fail(503, 'The enquiry service is temporarily unavailable.');
 }
 
-$mode = strtolower((string) (getenv('ECERT_SMTP_MODE') ?: 'starttls'));
+$mode = getenv('ECERT_SMTP_MODE');
+if (!is_string($mode) || $mode === '') {
+    $mode = ecert_private_config()['smtp_mode'] ?? 'starttls';
+}
+$mode = is_string($mode) ? strtolower($mode) : '';
 if (!in_array($mode, ['starttls', 'smtps'], true)) {
     ecert_contact_fail(503, 'The enquiry service is temporarily unavailable.');
 }

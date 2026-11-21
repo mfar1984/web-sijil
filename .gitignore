@@ -7,3 +7,8 @@
 /runtime/
 *.rate.json
 /previews/
+# cPanel server files kept in the production document root (git clone).
+/.well-known/
+/cgi-bin/
+error_log
+.ea-php-cli.cache

@@ -84,6 +84,7 @@ $denied = [
     'tests/site-audit.php', 'vendor/autoload.php', 'config/contact.example.php',
     'partials/head.php', 'partials/header.php', 'partials/footer.php', 'previews/home-desktop.png',
     'README.md', 'composer.json', 'composer.lock', '.env.example', '.gitignore', '.htaccess', 'router.php',
+    '.git', '.git/', '.git/config', '.git/HEAD', '.gitattributes', 'error_log', 'api/error_log',
 ];
 foreach ($denied as $deniedPath) {
     [$status] = $fetchNoFollow("{$baseUrl}/{$deniedPath}");

@@ -99,26 +99,40 @@ Without a private SMTP credential, a valid Contact submission intentionally retu
    ```
 
    If the hosting account has no Composer command, run the same command in a compatible local PHP environment and upload the generated `vendor/` directory. Do not edit files under `vendor/`.
-3. Create a writable rate-limit directory outside the public document root, for example `/home/account/private/ecert-contact-rate-limit`. Restrict it to the hosting account and configure `ECERT_RATE_LIMIT_DIR` with that absolute path. The endpoint rejects a rate directory inside the document root.
-4. Configure `ECERT_ALLOWED_ORIGIN` as the exact public origin, including `https://` and any intended `www` hostname. Do not use a wildcard.
-5. Configure the SMTP password through the hosting environment as `ECERT_SMTP_PASSWORD`. Do not put a real credential in this repository, `.env.example`, public files, deployment archives, or logs.
-6. If cPanel cannot provide a private process environment value, create a PHP file outside the public document root, restrict its permissions, and point `ECERT_CONTACT_CONFIG` to it through server configuration:
+3. cPanel gives PHP sites no private environment variables, so the endpoint reads its production settings from a private PHP file outside every document root: `/home/kflegacy/private/e-certificate-web.php`. The endpoint finds it without configuration (`api/` → site root → account home → `private/e-certificate-web.php`). `ECERT_CONTACT_CONFIG` can point elsewhere, and any `ECERT_*` environment variable that is set overrides the matching key. Create the directory with permissions `700` and the rate-limit directory `/home/kflegacy/private/ecert-contact-rate-limit` inside it, also `700`:
 
-   ```php
-   <?php
-   return ['smtp_password' => '<SMTP_PASSWORD>'];
+   ```bash
+   umask 077
+   mkdir -p /home/kflegacy/private/ecert-contact-rate-limit
+   chmod 700 /home/kflegacy/private /home/kflegacy/private/ecert-contact-rate-limit
    ```
 
-   Example protected location: `/home/account/private/contact.php`. Never place this file under `public_html` or another public document root.
-7. Select the transport with `ECERT_SMTP_MODE`:
+   The endpoint rejects a settings file or rate directory inside the document root.
+4. Copy the placeholder template `config/contact.example.php` to the private file and restrict it to the hosting account with permissions `600`:
+
+   ```bash
+   cp /home/kflegacy/e-certificate.com.my/config/contact.example.php /home/kflegacy/private/e-certificate-web.php
+   chmod 600 /home/kflegacy/private/e-certificate-web.php
+   ```
+
+   It sets `allowed_origins` (`https://www.e-certificate.com.my` and `https://e-certificate.com.my`, exact origins, never a wildcard), `rate_limit_dir` (`/home/kflegacy/private/ecert-contact-rate-limit`), `smtp_mode` and `smtp_password`.
+5. Open the private file in an editor on the server (for example `nano`, or cPanel File Manager → Edit) and replace `<SMTP_PASSWORD>` with the mailbox password. Typing it in the editor keeps it out of shell history. If the password contains `'` or `\`, put a `\` before that character. Do not put a real credential in this repository, `.env.example`, public files, deployment archives, or logs. While the placeholder remains, a valid submission returns `503`.
+6. Check the file: `php -l /home/kflegacy/private/e-certificate-web.php` reports no syntax errors, and `stat -c '%a %n' /home/kflegacy/private /home/kflegacy/private/e-certificate-web.php /home/kflegacy/private/ecert-contact-rate-limit` prints `700`, `600` and `700`.
+7. Select the transport with `smtp_mode` in the private file (or `ECERT_SMTP_MODE`):
    - `starttls` uses explicit STARTTLS on port 587 and is the default.
    - `smtps` uses implicit TLS on port 465.
-8. Confirm that PHP can read `vendor/autoload.php`, the private credential source, and the rate directory. Keep the private credential file unreadable to other hosting accounts.
-9. Confirm the `.htaccess` rules from a terminal, replacing the origin with the deployed one. Each denied path, including `router.php`, must return `403`. Each `.php`, `.html` and trailing-slash URL must return `301` with a `Location` ending in the clean URL and the same query string. The apex host must return `301` to `www`:
+8. Confirm that PHP can read `vendor/autoload.php` and the private file, and can write the rate directory. This probe sends no e-mail and uses no rate-limit attempt; `422` from both origins means the private file was read, `503` means it was not (check the path and permissions):
+
+   ```bash
+   for org in https://www.e-certificate.com.my https://e-certificate.com.my; do
+     curl -s -o /dev/null -w "$org %{http_code}\n" -X POST -H "Origin: $org" -H 'Content-Type: application/x-www-form-urlencoded' --data 'probe=1' https://www.e-certificate.com.my/api/contact.php
+   done
+   ```
+9. Confirm the `.htaccess` rules from a terminal, replacing the origin with the deployed one. Each denied path, including `router.php` and the git metadata, must return `403`. Each `.php`, `.html` and trailing-slash URL must return `301` with a `Location` ending in the clean URL and the same query string. The apex host must return `301` to `www`:
 
    ```bash
    origin=https://www.e-certificate.com.my
-   for path in tests/site-audit.php vendor/autoload.php config/contact.example.php partials/header.php previews/home-desktop.png README.md composer.json composer.lock .env.example .gitignore .htaccess router.php; do
+   for path in .git/config .git/HEAD .gitattributes error_log tests/site-audit.php vendor/autoload.php config/contact.example.php partials/header.php previews/home-desktop.png README.md composer.json composer.lock .env.example .gitignore .htaccess router.php; do
      printf '%s ' "$path"; curl -s -o /dev/null -w '%{http_code}\n' "$origin/$path"
    done
    for page in / /features /pricing /contact /verify; do
