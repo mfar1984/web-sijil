@@ -17,7 +17,7 @@
   );
   const allowedFields = [
     'full_name', 'email', 'organisation', 'phone', 'enquiry_type',
-    'type', 'duration', 'message', 'consent', 'website'
+    'type', 'duration', 'message', 'consent', 'ref_check'
   ];
   const allowedTypes = ['normal', 'government'];
   const allowedDurations = ['1', '3', '6', '12'];

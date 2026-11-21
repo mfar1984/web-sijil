@@ -191,7 +191,7 @@ function ecert_validate_contact(array $input): array
 {
     $allowedFields = [
         'full_name', 'email', 'organisation', 'phone', 'enquiry_type',
-        'type', 'duration', 'message', 'consent', 'website',
+        'type', 'duration', 'message', 'consent', 'ref_check',
     ];
     foreach (array_keys($input) as $field) {
         if (!in_array($field, $allowedFields, true)) {
@@ -204,7 +204,7 @@ function ecert_validate_contact(array $input): array
         $values[$field] = trim((string) ($input[$field] ?? ''));
     }
 
-    if ($values['website'] !== '') {
+    if ($values['ref_check'] !== '') {
         return [[], ['form' => 'The enquiry could not be accepted.']];
     }
 
@@ -264,7 +264,7 @@ function ecert_validate_contact(array $input): array
 
     $values['enquiry_label'] = $enquiryLabels[$values['enquiry_type']];
     $values['plan'] = $plan;
-    unset($values['website'], $values['consent'], $values['type'], $values['duration']);
+    unset($values['ref_check'], $values['consent'], $values['type'], $values['duration']);
     return [$values, []];
 }
 

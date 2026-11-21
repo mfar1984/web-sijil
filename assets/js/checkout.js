@@ -150,7 +150,7 @@
       return;
     }
 
-    const body = { package: plan, consent: true, hp_company: value('hp_company') };
+    const body = { package: plan, consent: true, ref_check: value('ref_check') };
     fields.forEach((name) => {
       const v = name === 'phone' ? phoneValue.value : value(name);
       if (v !== '') body[name] = name === 'email' ? v.toLowerCase() : v;

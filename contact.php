@@ -121,8 +121,8 @@ require __DIR__ . '/partials/header.php';
           </div>
 
           <div class="honeypot-field" aria-hidden="true">
-            <label for="website">Website</label>
-            <input id="website" name="website" type="text" tabindex="-1" autocomplete="off">
+            <label for="ref-check">Leave this field empty</label>
+            <input id="ref-check" name="ref_check" type="text" tabindex="-1" autocomplete="off">
           </div>
 
           <div class="consent-field">

@@ -386,8 +386,8 @@ $ecertDurationLabel = static fn (int $months): string => $months === 12 ? '1 yea
           </fieldset>
 
           <div class="honeypot-field" aria-hidden="true">
-            <label for="checkout-hp">Company</label>
-            <input id="checkout-hp" name="hp_company" type="text" tabindex="-1" autocomplete="off">
+            <label for="checkout-hp">Leave this field empty</label>
+            <input id="checkout-hp" name="ref_check" type="text" tabindex="-1" autocomplete="off">
           </div>
 
           <div class="consent-field">

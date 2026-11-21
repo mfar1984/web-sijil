@@ -64,7 +64,7 @@ function Form-Body([hashtable]$Overrides = @{}) {
         duration = '12'
         message = 'This is a valid endpoint integration test message.'
         consent = '1'
-        website = ''
+        ref_check = ''
     }
     foreach ($key in $Overrides.Keys) {
         if ($null -eq $Overrides[$key]) { $fields.Remove($key) } else { $fields[$key] = [string]$Overrides[$key] }
@@ -115,7 +115,7 @@ try {
     $response = Send-Request -Method 'POST' -Body (Form-Body @{ email = "victim@example.com`r`nBcc:other@example.com" })
     Assert-Result ($response.Status -eq 422) 'CRLF email injection is rejected'
 
-    $response = Send-Request -Method 'POST' -Body (Form-Body @{ website = 'bot.example' })
+    $response = Send-Request -Method 'POST' -Body (Form-Body @{ ref_check = 'bot.example' })
     Assert-Result ($response.Status -eq 422) 'filled honeypot is rejected'
 
     $response = Send-Request -Method 'POST' -Body ((Form-Body) + '&price=1')
