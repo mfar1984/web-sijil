@@ -5,11 +5,14 @@ declare(strict_types=1);
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 
+define('ECERT_API', true);
+
 const ECERT_MAX_REQUEST_BYTES = 16384;
 const ECERT_RATE_WINDOW_SECONDS = 900;
 const ECERT_RATE_MAX_ATTEMPTS = 5;
 const ECERT_RATE_MAX_CLIENTS = 1000;
 const ECERT_SMTP_HOST = 'indigo.herosite.pro';
+const ECERT_SMTP_PORT = 587;
 const ECERT_SMTP_USER = 'support@e-certificate.com.my';
 const ECERT_MAILBOX = 'support@e-certificate.com.my';
 
@@ -243,7 +246,12 @@ function ecert_validate_contact(array $input): array
     $plan = null;
     if ($values['type'] !== '' || $values['duration'] !== '') {
         require_once __DIR__ . '/plan-catalog.php';
+        require_once __DIR__ . '/../partials/app-api.php';
+        // The catalog checks the selectors; the price comes from the app's packages.
         $plan = ecert_resolve_plan(['type' => $values['type'], 'duration' => $values['duration']]);
+        if ($plan !== null) {
+            $plan = ecert_plan_from_packages($plan['type'], $plan['duration']);
+        }
         if ($plan === null) {
             $errors['type'] = 'Select a valid plan category.';
             $errors['duration'] = 'Select a valid plan duration.';
@@ -452,7 +460,24 @@ if (!is_string($mode) || $mode === '') {
     $mode = ecert_private_config()['smtp_mode'] ?? 'starttls';
 }
 $mode = is_string($mode) ? strtolower($mode) : '';
-if (!in_array($mode, ['starttls', 'smtps'], true)) {
+
+// SMTP host and port: environment first, then the private settings file, then
+// the production defaults. Lets a local check point the form at an SMTP sink.
+$smtpHost = getenv('ECERT_SMTP_HOST');
+if (!is_string($smtpHost) || $smtpHost === '') {
+    $smtpHost = ecert_private_config()['smtp_host'] ?? ECERT_SMTP_HOST;
+}
+$smtpPort = getenv('ECERT_SMTP_PORT');
+if (!is_string($smtpPort) || $smtpPort === '') {
+    $smtpPort = ecert_private_config()['smtp_port'] ?? ($mode === 'smtps' ? 465 : ECERT_SMTP_PORT);
+}
+$smtpPort = filter_var($smtpPort, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 65535]]);
+if (!is_string($smtpHost) || preg_match('/^[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$/D', $smtpHost) !== 1 || $smtpPort === false) {
+    ecert_contact_fail(503, 'The enquiry service is temporarily unavailable.');
+}
+// "none" (no TLS) is only for a local SMTP sink on the loopback interface.
+$smtpLoopback = in_array(strtolower($smtpHost), ['127.0.0.1', 'localhost'], true);
+if (!in_array($mode, ['starttls', 'smtps'], true) && !($mode === 'none' && $smtpLoopback)) {
     ecert_contact_fail(503, 'The enquiry service is temporarily unavailable.');
 }
 
@@ -462,7 +487,7 @@ if (is_array($contact['plan'])) {
     $plan = $contact['plan'];
     $category = $plan['type'] === 'government' ? 'Government' : 'Normal';
     $duration = $plan['duration'] === 12 ? '1 year' : $plan['duration'] . ' ' . ($plan['duration'] === 1 ? 'month' : 'months');
-    $planText = sprintf('%s (%s), RM%d [%s]', $category, $duration, $plan['price'], $plan['id']);
+    $planText = sprintf('%s (%s), %s [%s]', $category, $duration, $plan['price_display'], $plan['id']);
     $planHtml = ecert_escape($planText);
 }
 $phoneText = $contact['phone'] !== '' ? $contact['phone'] : 'Not provided';
@@ -489,13 +514,17 @@ try {
     $mail = new PHPMailer(true);
     $mail->SMTPDebug = SMTP::DEBUG_OFF;
     $mail->isSMTP();
-    $mail->Host = ECERT_SMTP_HOST;
+    $mail->Host = $smtpHost;
     $mail->SMTPAuth = true;
     $mail->Username = ECERT_SMTP_USER;
     $mail->Password = $password;
-    $mail->Port = $mode === 'smtps' ? 465 : 587;
-    $mail->SMTPSecure = $mode === 'smtps' ? PHPMailer::ENCRYPTION_SMTPS : PHPMailer::ENCRYPTION_STARTTLS;
-    $mail->SMTPAutoTLS = true;
+    $mail->Port = $smtpPort;
+    $mail->SMTPSecure = match ($mode) {
+        'smtps' => PHPMailer::ENCRYPTION_SMTPS,
+        'starttls' => PHPMailer::ENCRYPTION_STARTTLS,
+        default => '',
+    };
+    $mail->SMTPAutoTLS = $mode !== 'none';
     $mail->Timeout = 10;
     $mail->SMTPOptions = [
         'ssl' => [

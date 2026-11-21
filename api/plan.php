@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
+define('ECERT_API', true);
+
 require_once __DIR__ . '/plan-catalog.php';
+require_once __DIR__ . '/../partials/app-api.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
@@ -21,7 +24,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') {
     respond(405, ['success' => false, 'message' => 'Method not allowed.']);
 }
 
-$plan = ecert_resolve_plan($_GET);
+// The catalog only checks the selectors; the price comes from the app's packages.
+$selected = ecert_resolve_plan($_GET);
+$plan = $selected !== null ? ecert_plan_from_packages($selected['type'], $selected['duration']) : null;
 
 if ($plan === null) {
     respond(422, ['success' => false, 'message' => 'Select a valid plan.']);

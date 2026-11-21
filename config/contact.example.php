@@ -14,4 +14,7 @@ return [
     ],
     'rate_limit_dir'  => '/home/kflegacy/private/ecert-contact-rate-limit',
     'smtp_mode'       => 'starttls',           // 'smtps' switches to port 465
+    // Optional; defaults shown. Leave them out on production.
+    // 'smtp_host'    => 'indigo.herosite.pro',
+    // 'smtp_port'    => 587,
 ];

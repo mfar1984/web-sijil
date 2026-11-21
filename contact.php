@@ -46,7 +46,7 @@ require __DIR__ . '/partials/header.php';
               <div><dt>Duration</dt><dd data-plan-duration></dd></div>
               <div><dt>Price</dt><dd data-plan-price></dd></div>
             </dl>
-            <p>The displayed price is confirmed from the e-Certificate plan catalog.</p>
+            <p>The displayed price is confirmed from the current e-Certificate price list.</p>
             <a class="selected-plan-change" href="/pricing">Change plan</a>
           </aside>
         </div>

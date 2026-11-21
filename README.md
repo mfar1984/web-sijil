@@ -11,12 +11,14 @@ Pages are served at clean URLs without a file extension:
 - `/pricing` (`pricing.php`): Normal and Government pricing tabs.
 - `/contact` (`contact.php`): enquiry form and optional plan prefill.
 - `/verify` (`verify.php`): Verify Certificate, with QR scanning and certificate number entry.
-- `api/plan.php`: resolves an allowlisted plan and returns its server-derived price.
+- `/checkout` (`checkout.php`): buyer details for a package when online payment is on (`noindex`).
+- `/payment/status` (`payment-status.php`): the result after CHIP's payment page (`noindex`).
+- `api/plan.php`: resolves an allowlisted plan and returns its price from the app's packages.
 - `api/contact.php`: validates and sends same-origin contact submissions.
 
 The pages share one copy of the document head, header and footer in `partials/head.php`, `partials/header.php` and `partials/footer.php`. Each page defines `ECERT_PAGE` and a `$ecertPage` array (title, meta description, optional Open Graph data, active navigation key, clean `path`, body class and page scripts) before including them. The head prints `<link rel="canonical">` and `og:url` as `https://www.e-certificate.com.my` plus the page path. The `partials/` directory is denied with `403`; a partial executed directly without `ECERT_PAGE` also returns an empty `404`. Partials escape every printed value and the pages never echo query-string input.
 
-`.htaccess` serves `/<page>` from `<page>.php` internally and redirects with `301`, keeping the query string: `/index`, `/index.php`, `/index.html` and `/index/` to `/`; `/<page>.php`, the former `/<page>.html` and `/<page>/` to `/<page>`; and the apex `e-certificate.com.my` to `https://www.e-certificate.com.my`. Every link, asset and endpoint uses a root-absolute URL (`/pricing`, `/assets/css/styles.css`, `/api/plan.php`). The JSON endpoints under `/api/` keep their `.php` names.
+`.htaccess` serves `/<page>` from `<page>.php` internally and redirects with `301`, keeping the query string: `/index`, `/index.php`, `/index.html` and `/index/` to `/`; `/<page>.php`, the former `/<page>.html` and `/<page>/` to `/<page>`; `/payment-status.php` and `/payment/status/` to `/payment/status` (served from `payment-status.php`); and the apex `e-certificate.com.my` to `https://www.e-certificate.com.my`. Every link, asset and endpoint uses a root-absolute URL (`/pricing`, `/assets/css/styles.css`, `/api/plan.php`). The JSON endpoints under `/api/` keep their `.php` names.
 
 Primary navigation uses standalone clean page routes. Verify Certificate points to `/verify` on this site, and Sign In points to `https://apps.e-certificate.com.my/`.
 
@@ -65,11 +67,19 @@ Privacy: camera frames are processed on the device and never uploaded. Only the 
 | `government-06m` | Government | 6 months | RM100 |
 | `government-12m` | Government | 1 year | RM200 |
 
-Choose Plan currently routes to `/contact` with only `type` and `duration`. The browser and Contact endpoint resolve the price from the catalog; they never accept a client-supplied price.
+The catalog is now the selector allowlist and the display fallback only. Prices come from the app's packages (Billing > Payment > Packages), which are the only authority for the amount charged.
 
-### Future CHIP integration boundary
+### Packages from the app
 
-Payment integration is intentionally absent. A later CHIP integration should replace the Choose Plan destination at the plan-selection boundary. The server must create a purchase from an allowlisted stable plan ID and derive the amount from `api/plan-catalog.php`. Keep CHIP credentials server-side, verify signed webhook requests, and make fulfilment idempotent so a repeated webhook cannot fulfil the same purchase twice. Do not derive amounts from card text, query-string prices, or other client input.
+`partials/app-api.php` reads `GET {ECERT_APP_URL}/api/public/v1/packages` server-side (cURL, 3 s timeout, TLS verified, 64 KB cap) and validates every entry (code, category, duration, price 100 to 10,000,000 cents, name). Results are cached for 120 s in `ECERT_CACHE_DIR` (default `<system temp>/ecert-web-cache`); a failed fetch is remembered for 60 s. When the app cannot be reached, a cache up to 24 h old is shown with checkout off, otherwise the catalog above. `/pricing`, `api/plan.php` and the Contact email all use the same source, so `/contact` never disagrees with `/pricing`.
+
+### Checkout (CHIP Collect through the app)
+
+When the app reports `checkout_enabled` (Global Config > Payment enabled and configured), each plan button is **Buy now** and leads to `/checkout?plan=<code>`. Otherwise, and whenever the app is unreachable, buttons keep **Choose Plan** to `/contact?type=…&duration=…`.
+
+`/checkout` collects the same profile fields as the app's User Management form (name, email, phone, address, organisation) plus a terms and privacy consent; it never asks for a password, role or price. The browser posts JSON to `POST {ECERT_APP_URL}/api/public/v1/checkout` (exact-origin CORS, Origin check, honeypot `hp_company`, rate limits, full validation in the app). On `201` the browser goes to CHIP's hosted `checkout_url`; `422` errors are shown next to the fields; `429` shows the wait time.
+
+CHIP returns the buyer to `/payment/status?ref=<order reference>`. The page polls `GET {ECERT_APP_URL}/api/public/v1/checkout/{ref}` every 4 s (up to 30 times); the app re-checks with CHIP server-to-server. Query parameters are never treated as proof of payment. This site holds no CHIP key and no webhook: signed callbacks go to the app.
 
 ## Local setup
 

@@ -781,6 +781,41 @@ em { color: var(--cyan); font: inherit; font-style: normal; }
   .selected-plan { padding: 25px 20px; }
 }
 
+/* Checkout and payment status pages (reuse the contact form styles above). */
+.checkout-fieldset { min-width: 0; margin: 0 0 34px; padding: 0; border: 0; }
+.checkout-fieldset legend { margin-bottom: 18px; padding: 0; color: #2661ac; font-size: 13px; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; }
+.checkout-phone { display: grid; grid-template-columns: minmax(0, 150px) minmax(0, 1fr); gap: 8px; }
+.checkout-form .consent-field a { color: #2661ac; border-bottom: 1px solid rgba(38,97,172,.4); font-weight: 700; }
+.checkout-form .error-status a { color: inherit; text-decoration: underline; }
+.checkout-notice { max-width: 760px; padding: clamp(30px, 4vw, 48px); background: #fff; border: 1px solid #d6dcda; border-radius: 18px; box-shadow: 0 22px 60px rgba(16,33,59,.08); }
+.checkout-notice .form-step { display: flex; align-items: center; gap: 10px; margin: 0; color: #2661ac; font-size: 13px; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; }
+.checkout-notice h2 { margin: 12px 0 14px; color: var(--ink); font: 750 clamp(26px, 3vw, 34px)/1.15 var(--display); letter-spacing: -.03em; }
+.checkout-notice h2:focus { outline: none; }
+.checkout-notice > p:not(.form-step) { margin: 0 0 14px; color: #3d4f63; font-size: 15px; line-height: 1.65; }
+.checkout-notice-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 24px; margin-top: 26px; }
+.checkout-notice-actions .button { cursor: pointer; }
+.status-badge { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 850; letter-spacing: .08em; }
+.status-badge-test { color: #845518; background: #fff7e5; border: 1px solid #ead09b; }
+.payment-status-spinner { width: 34px; height: 34px; margin: 6px 0 18px; border: 3px solid #d6e4f2; border-top-color: #286bd1; border-radius: 50%; animation: checkout-spin .9s linear infinite; }
+.payment-status-spinner[hidden] { display: none; }
+.payment-status-details { margin: 22px 0 0; border-top: 1px solid #e1e5e3; }
+.payment-status-details > div { min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid #e1e5e3; }
+.payment-status-details dt { color: #6b7a8b; font-size: 12px; }
+.payment-status-details dd { margin: 0; color: var(--ink); font-size: 14px; font-weight: 800; overflow-wrap: anywhere; text-align: right; }
+.payment-status[data-state="paid"] h2 { color: #176653; }
+.payment-status[data-state="failed"] h2, .payment-status[data-state="cancelled"] h2, .payment-status[data-state="expired"] h2 { color: #8b2631; }
+@keyframes checkout-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 640px) {
+  .checkout-phone { grid-template-columns: 1fr; }
+  .checkout-notice { padding: 27px 20px; border-radius: 13px; }
+  .checkout-notice-actions .button { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .payment-status-spinner { animation: none; }
+}
+
 /* Verify Certificate page
    The page uses .verify-tool-panel and .verify-outcome because .verify-panel and
    .verify-result already style the home page's illustration cards above. */

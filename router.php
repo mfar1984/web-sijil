@@ -83,8 +83,13 @@ if (preg_match('#^index(?:\.php|\.html)?/?$#', $ecertRelative) === 1) {
     return true;
 }
 
-if (preg_match('#^(features|pricing|contact|verify)\.php$#', $ecertRelative, $ecertMatch) === 1) {
+if (preg_match('#^(features|pricing|contact|verify|checkout)\.php$#', $ecertRelative, $ecertMatch) === 1) {
     $ecertRedirect('/' . $ecertMatch[1]);
+    return true;
+}
+
+if ($ecertRelative === 'payment-status.php') {
+    $ecertRedirect('/payment/status');
     return true;
 }
 
@@ -93,8 +98,13 @@ if (preg_match('#^(features|pricing|contact)\.html$#', $ecertRelative, $ecertMat
     return true;
 }
 
-if (preg_match('#^(features|pricing|contact|verify)/$#', $ecertRelative, $ecertMatch) === 1) {
+if (preg_match('#^(features|pricing|contact|verify|checkout)/$#', $ecertRelative, $ecertMatch) === 1) {
     $ecertRedirect('/' . $ecertMatch[1]);
+    return true;
+}
+
+if ($ecertRelative === 'payment/status/') {
+    $ecertRedirect('/payment/status');
     return true;
 }
 
@@ -105,9 +115,14 @@ if ($ecertRelative === '') {
 }
 
 // Clean URL: serve /<page> from <page>.php when the file exists.
-if (preg_match('#^(features|pricing|contact|verify)$#', $ecertRelative, $ecertMatch) === 1
+if (preg_match('#^(features|pricing|contact|verify|checkout)$#', $ecertRelative, $ecertMatch) === 1
     && is_file(__DIR__ . '/' . $ecertMatch[1] . '.php')) {
     $ecertServe(__DIR__ . '/' . $ecertMatch[1] . '.php');
+    return true;
+}
+
+if ($ecertRelative === 'payment/status') {
+    $ecertServe(__DIR__ . '/payment-status.php');
     return true;
 }
 

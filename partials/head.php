@@ -23,6 +23,9 @@ $ecertBodyClass = (string) ($ecertPage['bodyClass'] ?? '');
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#07162c">
   <meta name="description" content="<?= $ecertEscape($ecertDescription) ?>">
+<?php if (($ecertPage['robots'] ?? '') === 'noindex'): ?>
+  <meta name="robots" content="noindex">
+<?php endif; ?>
   <link rel="canonical" href="<?= $ecertEscape($ecertCanonical) ?>">
   <meta property="og:url" content="<?= $ecertEscape($ecertCanonical) ?>">
 <?php if ($ecertOpenGraph !== null): ?>

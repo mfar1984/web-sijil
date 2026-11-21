@@ -41,10 +41,20 @@ $fetchNoFollow = static function (string $url): array {
     return [(int) ($match[1] ?? 0), $location];
 };
 
-$pages = ['/' => 'Home', '/features' => 'Features', '/pricing' => 'Pricing', '/verify' => 'Verify Certificate', '/contact' => 'Contact Us'];
+// Page => [current navigation label, its href]. Checkout and payment status
+// belong to the Pricing section of the navigation.
+$pages = [
+    '/' => ['Home', '/'],
+    '/features' => ['Features', '/features'],
+    '/pricing' => ['Pricing', '/pricing'],
+    '/verify' => ['Verify Certificate', '/verify'],
+    '/contact' => ['Contact Us', '/contact'],
+    '/checkout' => ['Pricing', '/pricing'],
+    '/payment/status' => ['Pricing', '/pricing'],
+];
 $documents = [];
 
-foreach ($pages as $page => $navLabel) {
+foreach ($pages as $page => [$navLabel, $navHref]) {
     [$status, $html] = $fetch($baseUrl . $page);
     $assert($status === 200, "{$page} returns 200");
     $document = new DOMDocument();
@@ -56,7 +66,11 @@ foreach ($pages as $page => $navLabel) {
     $active = $xpath->query('//nav[@aria-label="Primary navigation"]//a[contains(concat(" ", normalize-space(@class), " "), " active ")]');
     $assert($current->length === 1 && $active->length === 1 && $current->item(0) === $active->item(0)
         && trim($current->item(0)->textContent) === $navLabel
-        && $current->item(0)->getAttribute('href') === $page, "{$page} marks only {$navLabel} as the current navigation item");
+        && $current->item(0)->getAttribute('href') === $navHref, "{$page} marks only {$navLabel} as the current navigation item");
+    $robots = $xpath->query('//head/meta[@name="robots"]');
+    $noindex = in_array($page, ['/checkout', '/payment/status'], true);
+    $assert($noindex ? ($robots->length === 1 && $robots->item(0)->getAttribute('content') === 'noindex') : $robots->length === 0,
+        "{$page} " . ($noindex ? 'is noindex' : 'has no robots meta'));
     $headerActions = $xpath->query('//header//*[contains(concat(" ", normalize-space(@class), " "), " nav-actions ")]/*');
     $assert($headerActions->length === 1
         && $headerActions->item(0)->getAttribute('class') === 'button button-small'
@@ -102,6 +116,10 @@ $redirects = [
     '/features/?a=1' => '/features?a=1',
     '/verify.php?number=CERT-20260313090000-A1B2C3' => '/verify?number=CERT-20260313090000-A1B2C3',
     '/verify/' => '/verify',
+    '/checkout.php?plan=normal-01m' => '/checkout?plan=normal-01m',
+    '/checkout/' => '/checkout',
+    '/payment-status.php?ref=01ARZ3NDEKTSV4RRFFQ69G5FAV' => '/payment/status?ref=01ARZ3NDEKTSV4RRFFQ69G5FAV',
+    '/payment/status/' => '/payment/status',
 ];
 foreach ($redirects as $from => $to) {
     [$status, $location] = $fetchNoFollow($baseUrl . $from);
@@ -198,7 +216,9 @@ foreach ($cards as $card) {
     $approvedPrice = $expected[$key] ?? null;
     $assert($approvedPrice !== null, "plan card {$key} is allowlisted");
     $assert($price === "RM{$approvedPrice}", "plan card {$key} shows exact price");
-    $assert($href === "/contact?type={$type}&duration={$duration}", "plan card {$key} CTA contains only type and duration");
+    $planCode = sprintf('%s-%02dm', $type, (int) $duration);
+    $assert($href === "/contact?type={$type}&duration={$duration}" || $href === "/checkout?plan={$planCode}",
+        "plan card {$key} CTA is the Contact selection or the checkout for {$planCode}");
     $seen[$key] = true;
 }
 
@@ -226,7 +246,9 @@ $assert(str_contains($pricing->textContent, 'Contact us to confirm.'), 'unknown 
 
 [$validStatus, $validBody] = $fetch("{$baseUrl}/api/plan.php?type=government&duration=12");
 $validPayload = json_decode($validBody, true);
-$assert($validStatus === 200 && ($validPayload['plan']['price'] ?? null) === 200, 'plan API derives an approved price');
+$assert($validStatus === 200 && ($validPayload['plan']['price'] ?? null) === 200
+    && ($validPayload['plan']['price_cents'] ?? null) === 20000
+    && ($validPayload['plan']['price_display'] ?? null) === 'RM200', 'plan API derives an approved price');
 
 [$tamperStatus, $tamperBody] = $fetch("{$baseUrl}/api/plan.php?type=government&duration=12&price=1");
 $tamperPayload = json_decode($tamperBody, true);

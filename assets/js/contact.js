@@ -104,12 +104,14 @@
       .then((response) => response.ok ? response.json() : Promise.reject(new Error('Invalid plan response')))
       .then((payload) => {
         const plan = payload.plan;
-        if (!payload.success || !plan || plan.type !== type || String(plan.duration) !== duration || !Number.isInteger(plan.price)) {
+        if (!payload.success || !plan || plan.type !== type || String(plan.duration) !== duration
+          || !Number.isInteger(plan.price_cents) || typeof plan.price_display !== 'string'
+          || !/^RM\d{1,6}(\.\d{2})?$/.test(plan.price_display)) {
           throw new Error('Invalid plan record');
         }
         typeOutput.textContent = plan.type === 'government' ? 'Government' : 'Normal';
         durationOutput.textContent = plan.duration === 12 ? '1 year' : `${plan.duration} ${plan.duration === 1 ? 'month' : 'months'}`;
-        priceOutput.textContent = `RM${plan.price}`;
+        priceOutput.textContent = plan.price_display;
         summary.hidden = false;
       })
       .catch((error) => {

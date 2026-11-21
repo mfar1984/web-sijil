@@ -30,18 +30,24 @@ RewriteCond %{THE_REQUEST} ^[A-Z]+\s/index(?:\.php|\.html)?/?(?:[?\s])
 RewriteRule ^index(?:\.php|\.html)?/?$ / [R=301,L]
 # /<page>.php -> /<page>. /verify.php also covers the legacy www verify
 # endpoint, so old links land on the clean /verify URL.
-RewriteCond %{THE_REQUEST} ^[A-Z]+\s/(?:features|pricing|contact|verify)\.php(?:[?\s])
-RewriteRule ^(features|pricing|contact|verify)\.php$ /$1 [R=301,L]
+RewriteCond %{THE_REQUEST} ^[A-Z]+\s/(?:features|pricing|contact|verify|checkout)\.php(?:[?\s])
+RewriteRule ^(features|pricing|contact|verify|checkout)\.php$ /$1 [R=301,L]
+# /payment-status.php -> /payment/status (the status page has a nested clean URL).
+RewriteCond %{THE_REQUEST} ^[A-Z]+\s/payment-status\.php(?:[?\s])
+RewriteRule ^payment-status\.php$ /payment/status [R=301,L]
 # Retired static pages: /<page>.html -> /<page>.
 RewriteCond %{THE_REQUEST} ^[A-Z]+\s/(?:features|pricing|contact)\.html(?:[?\s])
 RewriteRule ^(features|pricing|contact)\.html$ /$1 [R=301,L]
 # Trailing slash: /<page>/ -> /<page>.
-RewriteCond %{THE_REQUEST} ^[A-Z]+\s/(?:features|pricing|contact|verify)/(?:[?\s])
-RewriteRule ^(features|pricing|contact|verify)/$ /$1 [R=301,L]
+RewriteCond %{THE_REQUEST} ^[A-Z]+\s/(?:features|pricing|contact|verify|checkout)/(?:[?\s])
+RewriteRule ^(features|pricing|contact|verify|checkout)/$ /$1 [R=301,L]
+RewriteCond %{THE_REQUEST} ^[A-Z]+\s/payment/status/(?:[?\s])
+RewriteRule ^payment/status/$ /payment/status [R=301,L]
 # Clean URL: serve /<page> from <page>.php internally when the file exists.
 # Only these page names are rewritten, so /api/*.php and /assets/* are untouched.
 RewriteCond %{REQUEST_FILENAME}.php -f
-RewriteRule ^(features|pricing|contact|verify)$ $1.php [L]
+RewriteRule ^(features|pricing|contact|verify|checkout)$ $1.php [L]
+RewriteRule ^payment/status$ payment-status.php [L]
 # Second layer for the same private files in any directory, without mod_rewrite.
 <FilesMatch "^(?:README\.md|composer\.(?:json|lock)|\.env.*|\.git(?:ignore|attributes)|\.htaccess|error_log)$">
     Require all denied
