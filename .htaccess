@@ -52,14 +52,17 @@ RewriteRule ^payment/status$ payment-status.php [L]
 <FilesMatch "^(?:README\.md|composer\.(?:json|lock)|\.env.*|\.git(?:ignore|attributes)|\.htaccess|error_log)$">
     Require all denied
 </FilesMatch>
-# cPanel MultiPHP handler, copied byte for byte from the legacy site's
-# .htaccess so the server copy can stay identical to git. Before the switch
-# the owner must compare it with the live server file and commit any
-# difference. Only cPanel/CloudLinux understands this handler; php -S and
-# router.php ignore it.
+# cPanel MultiPHP handler, copied byte for byte from the live server so the
+# server copy stays identical to git. cPanel rewrites this block whenever the
+# domain's PHP version changes in MultiPHP Manager, which makes the server's
+# working tree dirty and stops git pull; when that happens, copy the new block
+# here and commit it. The site needs PHP 8.4: partials/app-api.php and the
+# checkout pages use syntax that alt-php83 rejects with a 500. Only
+# cPanel/CloudLinux understands this handler; php -S and router.php ignore it.
+
 # php -- BEGIN cPanel-generated handler, do not edit
-# Set the “alt-php83” package as the default “PHP” programming language.
+# Set the “ea-php84” package as the default “PHP” programming language.
 <IfModule mime_module>
-  AddHandler application/x-httpd-alt-php83 .php .php8 .phtml
+  AddHandler application/x-httpd-ea-php84 .php .php8 .phtml
 </IfModule>
 # php -- END cPanel-generated handler, do not edit
