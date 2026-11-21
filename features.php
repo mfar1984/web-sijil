@@ -109,7 +109,7 @@ require __DIR__ . '/partials/header.php';
             <span class="story-number">05 / Verify</span>
             <h2>Give every certificate a public check.</h2>
             <p>A reviewer can use the public verification page to check a certificate by its number or follow its QR-linked record.</p>
-            <a class="text-link" href="https://apps.e-certificate.com.my/verify">Open public verification <span aria-hidden="true">↗</span></a>
+            <a class="text-link" href="/verify">Open public verification <span aria-hidden="true">↗</span></a>
           </div>
           <div class="story-visual verification-story-visual" aria-hidden="true">
             <div class="feature-qr"><span></span></div>
@@ -141,7 +141,7 @@ require __DIR__ . '/partials/header.php';
         </div>
         <div>
           <p>Open the live verification route to check an existing certificate record, with no account required for the public lookup.</p>
-          <a class="button button-cyan" href="https://apps.e-certificate.com.my/verify">Verify a Certificate <span aria-hidden="true">↗</span></a>
+          <a class="button button-cyan" href="/verify">Verify a Certificate <span aria-hidden="true">↗</span></a>
         </div>
       </div>
     </section>

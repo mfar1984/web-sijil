@@ -41,7 +41,7 @@ $fetchNoFollow = static function (string $url): array {
     return [(int) ($match[1] ?? 0), $location];
 };
 
-$pages = ['/' => 'Home', '/features' => 'Features', '/pricing' => 'Pricing', '/contact' => 'Contact Us'];
+$pages = ['/' => 'Home', '/features' => 'Features', '/pricing' => 'Pricing', '/verify' => 'Verify Certificate', '/contact' => 'Contact Us'];
 $documents = [];
 
 foreach ($pages as $page => $navLabel) {
@@ -99,6 +99,8 @@ $redirects = [
     '/contact.php?type=normal&duration=6' => '/contact?type=normal&duration=6',
     '/contact/' => '/contact',
     '/features/?a=1' => '/features?a=1',
+    '/verify.php?number=CERT-20260313090000-A1B2C3' => '/verify?number=CERT-20260313090000-A1B2C3',
+    '/verify/' => '/verify',
 ];
 foreach ($redirects as $from => $to) {
     [$status, $location] = $fetchNoFollow($baseUrl . $from);
@@ -138,6 +140,34 @@ foreach ($documents as $page => $document) {
         $href = $navLink->getAttribute('href');
         $assert(!in_array($href, ['#features', '#pricing', '#contact'], true), "{$page} primary navigation uses page routes");
     }
+}
+
+$verifyXpath = new DOMXPath($documents['/verify']);
+$verifyTools = $verifyXpath->query('//*[@data-verify-tool]');
+$verifyTool = $verifyTools->item(0);
+$assert($verifyTools->length === 1, 'verify page has one verification tool');
+$assert($verifyTool !== null && preg_match('~^https?://[^/?#]+$~', $verifyTool->getAttribute('data-api-base')) === 1, 'verify tool API base is a bare origin');
+$jsqrSrc = $verifyTool?->getAttribute('data-jsqr-src') ?? '';
+$assert(str_starts_with($jsqrSrc, '/assets/vendor/'), 'verify tool decoder is vendored under /assets/vendor/');
+[$jsqrStatus] = $fetch($baseUrl . $jsqrSrc);
+$assert($jsqrSrc !== '' && $jsqrStatus === 200, "verify tool decoder {$jsqrSrc} resolves");
+$verifyForms = $verifyXpath->query('//form[@data-verify-form]');
+$verifyForm = $verifyForms->item(0);
+$assert($verifyForms->length === 1 && $verifyForm->getAttribute('action') === '/verify'
+    && strtolower($verifyForm->getAttribute('method')) === 'get', 'verify form submits GET to /verify');
+$numberInputs = $verifyXpath->query('.//input[@name="number"]', $verifyForm);
+$numberInputId = $numberInputs->item(0)?->getAttribute('id') ?? '';
+$assert($numberInputs->length === 1 && $numberInputId !== ''
+    && $verifyXpath->query('//label[@for="' . $numberInputId . '"]')->length === 1, 'verify form has one labelled number input');
+$noscripts = $verifyXpath->query('//noscript');
+$assert($noscripts->length === 1 && str_contains($noscripts->item(0)->textContent,
+    'Certificate verification needs JavaScript. Turn it on to check a number or scan a QR code.'), 'verify page has the noscript notice');
+$assert($verifyXpath->query('//*[@data-verify-result][@aria-live="polite"]')->length === 1, 'verify result region is a polite live region');
+$verifyScripts = $verifyXpath->query('//script[@src]');
+$assert($verifyScripts->length > 0, 'verify page loads its scripts');
+foreach ($verifyScripts as $script) {
+    $src = $script->getAttribute('src');
+    $assert(str_starts_with($src, '/assets/') && !str_contains($src, 'jsqr'), "verify page script {$src} is a local asset loaded up front");
 }
 
 $pricing = $documents['/pricing'];

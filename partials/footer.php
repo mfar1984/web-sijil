@@ -18,7 +18,7 @@ if (!defined('ECERT_PAGE')) {
         <a class="footer-email" href="mailto:support@e-certificate.com.my">support@e-certificate.com.my</a>
       </div>
       <div class="footer-links"><h2>Explore</h2><a href="/">Home</a><a href="/features">Features</a><a href="/pricing">Pricing</a><a href="/contact">Contact Us</a></div>
-      <div class="footer-links"><h2>Product</h2><a href="https://apps.e-certificate.com.my/verify">Verify Certificate</a><a href="https://apps.e-certificate.com.my/">Sign In</a><a href="/contact">Get Started</a></div>
+      <div class="footer-links"><h2>Product</h2><a href="/verify">Verify Certificate</a><a href="https://apps.e-certificate.com.my/">Sign In</a><a href="/contact">Get Started</a></div>
       <div class="footer-note"><h2>Built for real programmes</h2><p>From participant management and attendance to PDF certificates, email delivery and public verification.</p></div>
     </div>
     <div class="container footer-bottom"><p>© <span data-year>2026</span> e-Certificate. All rights reserved.</p><p>Designed for organisations in Malaysia.</p></div>

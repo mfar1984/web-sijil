@@ -75,7 +75,7 @@ require __DIR__ . '/partials/header.php';
                 <p class="eyebrow"><span></span> Public certificate verification</p>
                 <h2>Verify every certificate <em>instantly.</em></h2>
                 <p class="hero-lead">Give recipients, employers and institutions a direct public route to check a certificate by number or its QR-linked record.</p>
-                <div class="hero-actions"><a class="button" href="https://apps.e-certificate.com.my/verify">Verify a Certificate <span aria-hidden="true">↗</span></a><a class="button button-secondary" href="#verification">Learn About Verification</a></div>
+                <div class="hero-actions"><a class="button" href="/verify">Verify a Certificate <span aria-hidden="true">↗</span></a><a class="button button-secondary" href="#verification">Learn About Verification</a></div>
                 <ul class="hero-points" aria-label="Verification capabilities"><li><span aria-hidden="true">✓</span> Public access</li><li><span aria-hidden="true">✓</span> Certificate lookup</li><li><span aria-hidden="true">✓</span> QR-linked record</li></ul>
               </div>
               <div class="product-stage verification-stage" aria-label="Illustration of QR certificate verification">
@@ -136,7 +136,7 @@ require __DIR__ . '/partials/header.php';
           </article>
 
           <article class="bento bento-wide">
-            <div class="bento-copy"><span class="feature-number">04</span><h3>Verification that travels with the certificate</h3><p>Recipients and third parties can use a certificate number or QR-linked public page to confirm an award.</p><a class="text-link" href="https://apps.e-certificate.com.my/verify">Open public verification <span aria-hidden="true">↗</span></a></div>
+            <div class="bento-copy"><span class="feature-number">04</span><h3>Verification that travels with the certificate</h3><p>Recipients and third parties can use a certificate number or QR-linked public page to confirm an award.</p><a class="text-link" href="/verify">Open public verification <span aria-hidden="true">↗</span></a></div>
             <div class="verify-panel" aria-hidden="true"><span class="scan-corners"></span><svg class="qr large" viewBox="0 0 29 29"><rect width="29" height="29" rx="2" fill="#fff"/><g fill="#081a34"><path d="M2 2h8v8H2zM4 4v4h4V4zM19 2h8v8h-8zM21 4v4h4V4zM2 19h8v8H2zM4 21v4h4v-4z" fill-rule="evenodd"/><path d="M12 2h2v2h-2zm3 0h2v5h-2zm-3 4h2v3h-2zm1 5h3v2h-3zm5 0h3v2h-3zm4 1h2v3h-2zm3-1h2v5h-2zm-14 4h2v3h-2zm4-1h2v3h-2zm3 1h3v2h-3zm-6 5h3v2h-3zm4-2h2v2h-2zm3 1h3v4h-3zm5-1h3v3h-3zm-12 6h2v3h-2zm4-1h2v4h-2zm4 2h2v2h-2zm4-2h3v4h-3z"/></g></svg><div><i>✓</i><small>Verification result</small><strong>Certificate is valid</strong></div></div>
           </article>
 
@@ -237,7 +237,7 @@ require __DIR__ . '/partials/header.php';
             <li><i>✓</i><span><strong>Certificate number lookup</strong>Support a clear manual path when scanning is not convenient.</span></li>
             <li><i>✓</i><span><strong>Focused verification result</strong>Confirm the award through the application’s public certificate record.</span></li>
           </ul>
-          <a class="button button-cyan" href="https://apps.e-certificate.com.my/verify">Verify a Certificate <span aria-hidden="true">↗</span></a>
+          <a class="button button-cyan" href="/verify">Verify a Certificate <span aria-hidden="true">↗</span></a>
         </div>
       </div>
     </section>

@@ -13,7 +13,7 @@ $ecertNavItems = [
     'home' => ['Home', '/'],
     'features' => ['Features', '/features'],
     'pricing' => ['Pricing', '/pricing'],
-    'verify' => ['Verify Certificate', 'https://apps.e-certificate.com.my/verify'],
+    'verify' => ['Verify Certificate', '/verify'],
     'contact' => ['Contact Us', '/contact'],
 ];
 ?>
