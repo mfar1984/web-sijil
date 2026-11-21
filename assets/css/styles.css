@@ -794,6 +794,10 @@ em { color: var(--cyan); font: inherit; font-style: normal; }
 .checkout-notice > p:not(.form-step) { margin: 0 0 14px; color: #3d4f63; font-size: 15px; line-height: 1.65; }
 .checkout-notice-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 24px; margin-top: 26px; }
 .checkout-notice-actions .button { cursor: pointer; }
+/* .button sets display, which beats the browser's [hidden] rule, so every
+   action stayed visible whatever the payment state: a buyer who had already
+   paid was still offered "Try again" straight back into checkout. */
+.checkout-notice [hidden] { display: none !important; }
 .status-badge { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 850; letter-spacing: .08em; }
 .status-badge-test { color: #845518; background: #fff7e5; border: 1px solid #ead09b; }
 .payment-status-spinner { width: 34px; height: 34px; margin: 6px 0 18px; border: 3px solid #d6e4f2; border-top-color: #286bd1; border-radius: 50%; animation: checkout-spin .9s linear infinite; }

@@ -29,7 +29,9 @@
     spinner.hidden = state !== 'pending';
     retry.hidden = state !== 'stalled';
     pricing.hidden = !['failed', 'cancelled', 'expired'].includes(state);
-    signin.hidden = !(state === 'paid' && payload?.account === 'renewal');
+    // Paid leaves only Sign in and Contact us: checking again or paying again
+    // makes no sense once the money is in.
+    signin.hidden = state !== 'paid';
     if (payload && typeof payload.reference === 'string') {
       el('package').textContent = typeof payload.package_name === 'string' ? payload.package_name : '';
       el('amount').textContent = typeof payload.amount_display === 'string' ? payload.amount_display : '';
