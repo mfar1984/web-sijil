@@ -32,6 +32,18 @@ $ecertOgImageAlt = (string) ($ecertPage['ogImageAlt'] ?? 'e-Certificate: issue e
 $ecertSiteVerification = ecert_google_site_verification();
 $ecertScripts = array_merge(['/assets/js/main.js'], array_map('strval', (array) ($ecertPage['scripts'] ?? [])));
 $ecertBodyClass = (string) ($ecertPage['bodyClass'] ?? '');
+// Cache busting. .htaccess serves the CSS, JS and icon files with a one-year
+// immutable Cache-Control, which is only safe because every URL carries the
+// file's modification time: a deploy rewrites the timestamp, the URL changes
+// and browsers fetch the new file. Paths that are not local files (or full
+// URLs) are printed unchanged.
+$ecertAssetUrl = static function (string $path) use ($ecertEscape): string {
+    if ($path === '' || $path[0] !== '/' || str_starts_with($path, '//')) {
+        return $ecertEscape($path);
+    }
+    $modified = @filemtime(dirname(__DIR__) . $path);
+    return $ecertEscape($modified === false ? $path : $path . '?v=' . $modified);
+};
 ?>
 <!doctype html>
 <html lang="en">
@@ -62,10 +74,11 @@ $ecertBodyClass = (string) ($ecertPage['bodyClass'] ?? '');
   <meta name="twitter:description" content="<?= $ecertEscape($ecertOgDescription) ?>">
   <meta name="twitter:image" content="<?= $ecertEscape($ecertOgImageUrl) ?>">
   <title><?= $ecertEscape($ecertTitle) ?></title>
-  <link rel="icon" href="/assets/images/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/css/styles.css">
+  <link rel="icon" href="<?= $ecertAssetUrl('/assets/images/favicon.svg') ?>" type="image/svg+xml">
+  <link rel="preload" href="<?= $ecertAssetUrl('/assets/css/styles.css') ?>" as="style">
+  <link rel="stylesheet" href="<?= $ecertAssetUrl('/assets/css/styles.css') ?>">
 <?php foreach ($ecertScripts as $ecertScript): ?>
-  <script src="<?= $ecertEscape($ecertScript) ?>" defer></script>
+  <script src="<?= $ecertAssetUrl($ecertScript) ?>" defer></script>
 <?php endforeach; ?>
 <?php require __DIR__ . '/structured-data.php'; ?>
 </head>

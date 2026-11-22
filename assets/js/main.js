@@ -39,7 +39,15 @@
     if (window.innerWidth >= 900 && toggle?.getAttribute('aria-expanded') === 'true') setMenu(false);
   });
 
-  const updateHeader = () => header?.classList.toggle('scrolled', window.scrollY > 12);
+  let headerRafPending = false;
+  const updateHeader = () => {
+    if (headerRafPending) return;
+    headerRafPending = true;
+    requestAnimationFrame(() => {
+      headerRafPending = false;
+      header?.classList.toggle('scrolled', window.scrollY > 12);
+    });
+  };
   updateHeader();
   window.addEventListener('scroll', updateHeader, { passive: true });
 
