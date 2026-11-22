@@ -7,6 +7,10 @@ use PHPMailer\PHPMailer\SMTP;
 
 define('ECERT_API', true);
 
+// Shared reader for the private settings file outside the document root
+// (ecert_private_config() and ecert_path_is_inside()).
+require_once __DIR__ . '/../partials/private-config.php';
+
 const ECERT_MAX_REQUEST_BYTES = 16384;
 const ECERT_RATE_WINDOW_SECONDS = 900;
 const ECERT_RATE_MAX_ATTEMPTS = 5;
@@ -53,48 +57,6 @@ function ecert_normalize_origin(string $origin): ?string
         $normalized .= ':' . $parts['port'];
     }
     return $normalized;
-}
-
-function ecert_path_is_inside(string $path, string $parent): bool
-{
-    $path = rtrim(str_replace('\\', '/', strtolower($path)), '/') . '/';
-    $parent = rtrim(str_replace('\\', '/', strtolower($parent)), '/') . '/';
-    return str_starts_with($path, $parent);
-}
-
-// Private settings file outside the document root. ECERT_CONTACT_CONFIG wins;
-// otherwise <account home>/private/e-certificate-web.php, which on cPanel is
-// /home/kflegacy/private/e-certificate-web.php (api/ -> site root -> home).
-function ecert_private_config(): array
-{
-    static $config = null;
-    if (is_array($config)) {
-        return $config;
-    }
-    $config = [];
-
-    $configPath = getenv('ECERT_CONTACT_CONFIG');
-    if (!is_string($configPath) || $configPath === '') {
-        $configPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'private' . DIRECTORY_SEPARATOR . 'e-certificate-web.php';
-    }
-    $resolvedPath = realpath($configPath);
-    $documentRoot = realpath((string) ($_SERVER['DOCUMENT_ROOT'] ?? ''));
-    if ($resolvedPath === false || !is_file($resolvedPath) || !is_readable($resolvedPath)
-        || ($documentRoot !== false && ecert_path_is_inside($resolvedPath, $documentRoot))) {
-        return $config;
-    }
-
-    try {
-        $loaded = (static function (string $path): mixed {
-            return require $path;
-        })($resolvedPath);
-    } catch (Throwable) {
-        return $config;
-    }
-    if (is_array($loaded)) {
-        $config = $loaded;
-    }
-    return $config;
 }
 
 // Normalizes a comma-separated string or a list of origins. Any invalid entry,

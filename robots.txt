@@ -1,0 +1,13 @@
+# https://www.e-certificate.com.my
+# Crawling is open for the five public pages. /assets/ stays crawlable on
+# purpose: Google needs the CSS and JS to render the pages.
+User-agent: *
+Allow: /
+# Transactional routes and the JSON endpoints are never indexed. Both pages
+# also send <meta name="robots" content="noindex">, because a Disallow only
+# stops crawling and does not remove a URL from the index on its own.
+Disallow: /checkout
+Disallow: /payment/status
+Disallow: /api/
+
+Sitemap: https://www.e-certificate.com.my/sitemap.xml

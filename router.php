@@ -129,6 +129,8 @@ if ($ecertRelative === 'payment/status') {
 $ecertFile = __DIR__ . '/' . $ecertRelative;
 
 // Existing file: let the built-in server serve it (or run it, for /api/*.php).
+// /robots.txt, /sitemap.xml and a google<token>.html verification file reach
+// this point untouched by the deny rules and the clean-URL rewrites above.
 if (is_file($ecertFile)) {
     return false;
 }

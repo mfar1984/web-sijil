@@ -48,6 +48,10 @@ RewriteRule ^payment/status/$ /payment/status [R=301,L]
 RewriteCond %{REQUEST_FILENAME}.php -f
 RewriteRule ^(features|pricing|contact|verify|checkout)$ $1.php [L]
 RewriteRule ^payment/status$ payment-status.php [L]
+# /robots.txt, /sitemap.xml and a google<token>.html Search Console file are
+# ordinary static files at the site root: no deny rule above matches them, the
+# rewrites only match the page names listed, and the FilesMatch below does not
+# cover them, so each is served with a 200. Keep it that way.
 # Second layer for the same private files in any directory, without mod_rewrite.
 <FilesMatch "^(?:README\.md|composer\.(?:json|lock)|\.env.*|\.git(?:ignore|attributes)|\.htaccess|error_log)$">
     Require all denied

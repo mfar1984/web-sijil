@@ -15,12 +15,31 @@ Pages are served at clean URLs without a file extension:
 - `/payment/status` (`payment-status.php`): the result after CHIP's payment page (`noindex`).
 - `api/plan.php`: resolves an allowlisted plan and returns its price from the app's packages.
 - `api/contact.php`: validates and sends same-origin contact submissions.
+- `robots.txt`: crawling rules and the `Sitemap:` line.
+- `sitemap.xml`: the five public pages.
 
 The pages share one copy of the document head, header and footer in `partials/head.php`, `partials/header.php` and `partials/footer.php`. Each page defines `ECERT_PAGE` and a `$ecertPage` array (title, meta description, optional Open Graph data, active navigation key, clean `path`, body class and page scripts) before including them. The head prints `<link rel="canonical">` and `og:url` as `https://www.e-certificate.com.my` plus the page path. The `partials/` directory is denied with `403`; a partial executed directly without `ECERT_PAGE` also returns an empty `404`. Partials escape every printed value and the pages never echo query-string input.
 
 `.htaccess` serves `/<page>` from `<page>.php` internally and redirects with `301`, keeping the query string: `/index`, `/index.php`, `/index.html` and `/index/` to `/`; `/<page>.php`, the former `/<page>.html` and `/<page>/` to `/<page>`; `/payment-status.php` and `/payment/status/` to `/payment/status` (served from `payment-status.php`); and the apex `e-certificate.com.my` to `https://www.e-certificate.com.my`. Every link, asset and endpoint uses a root-absolute URL (`/pricing`, `/assets/css/styles.css`, `/api/plan.php`). The JSON endpoints under `/api/` keep their `.php` names.
 
 Primary navigation uses standalone clean page routes. Verify Certificate points to `/verify` on this site, and Sign In points to `https://apps.e-certificate.com.my/`.
+
+## Search engine metadata
+
+`partials/head.php` prints the per-page title, meta description, canonical URL, `theme-color`, the SVG favicon and the social tags: `og:url`, `og:site_name`, `og:title`, `og:description`, `og:type`, `og:locale` (`en_MY`), `og:image` with its width, height and alt text, and `twitter:card` (`summary_large_image`), `twitter:title`, `twitter:description` and `twitter:image`. `$ecertPage['og']` overrides the Open Graph title and description; `ogImage`, `ogImageWidth`, `ogImageHeight` and `ogImageAlt` override the share image. The default share image is `assets/images/og-cover.png`, an original 1200x630 cover in the site palette, committed and publicly served (`previews/` is gitignored and must not be used for it). `$ecertPage['robots'] => 'noindex'` prints the robots meta tag; `/checkout` and `/payment/status` use it.
+
+`partials/structured-data.php`, included by the head, prints one `application/ld+json` block per page. Every node is a PHP array encoded with `json_encode` using `JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT`, so no page value can break the JSON or close the script element. The graph is `Organization` (name, site URL, logo and the `support@e-certificate.com.my` contact point) on every page, plus `WebSite` on `/`, a two-level `BreadcrumbList` on the four inner public pages, and `SoftwareApplication` on `/pricing`. The pricing offers are an `AggregateOffer` in `MYR` built from the packages and duration labels `/pricing` has already resolved, so the markup always carries the prices the plan cards print. No rating, review, award, phone number, postal address or social profile is published, and there is no `FAQPage` because the pages have no FAQ section.
+
+`robots.txt` allows crawling, points at `https://www.e-certificate.com.my/sitemap.xml` and disallows `/checkout`, `/payment/status` and `/api/`. `/assets/` stays crawlable on purpose: Google needs the CSS and JS to render the pages. Both transactional pages are also `noindex`, because a `Disallow` alone does not remove a URL from the index. `sitemap.xml` is a static file listing the five public pages as absolute URLs with `changefreq` and `priority` and no `lastmod`. Both files are ordinary static files at the site root: no `.htaccess` deny rule or clean-URL rewrite matches them, and `router.php` mirrors that.
+
+### Google Search Console verification
+
+No code change is needed to verify ownership. Either method works:
+
+- HTML tag: set `google_site_verification` in the private settings file `/home/kflegacy/private/e-certificate-web.php` (template: `config/contact.example.php`), or the `ECERT_GOOGLE_SITE_VERIFICATION` environment variable, to the `content` value Search Console shows. The pages then print `<meta name="google-site-verification" content="…">`. While the key is absent, or the value is not a bare token (`A-Za-z0-9_-`, 16 to 128 characters), nothing is printed. `partials/private-config.php` is the single reader of that file; `api/contact.php` uses the same loader for its own keys.
+- HTML file: upload the `google<token>.html` file to the document root. No deny rule covers that name, so it is served with a `200`.
+
+The token is not a secret, but it is site-specific, so it stays out of the repository.
 
 ## Verify Certificate page
 
@@ -145,7 +164,7 @@ Without a private SMTP credential, a valid Contact submission intentionally retu
    for path in .git/config .git/HEAD .gitattributes error_log tests/site-audit.php vendor/autoload.php config/contact.example.php partials/header.php previews/home-desktop.png README.md composer.json composer.lock .env.example .gitignore .htaccess router.php; do
      printf '%s ' "$path"; curl -s -o /dev/null -w '%{http_code}\n' "$origin/$path"
    done
-   for page in / /features /pricing /contact /verify; do
+   for page in / /features /pricing /contact /verify /robots.txt /sitemap.xml; do
      printf '%s ' "$page"; curl -s -o /dev/null -w '%{http_code}\n' "$origin$page"
    done
    for path in index.php index.html features.php pricing.html contact.php contact/ verify.php verify/; do
@@ -155,7 +174,7 @@ Without a private SMTP credential, a valid Contact submission intentionally retu
    curl -s -o /dev/null -w '%{http_code}\n' "$origin/api/plan.php?type=government&duration=12"
    ```
 
-   The five clean pages and the last command must return `200`: `/api/` stays public and keeps its `.php` names.
+   The five clean pages, `/robots.txt`, `/sitemap.xml` and the last command must return `200`: `/api/` stays public and keeps its `.php` names.
 
    The Verify page uses the production app by default. Only set `ECERT_APP_URL` on cPanel if the app moves to another origin.
 
@@ -199,6 +218,8 @@ php -l verify.php
 php -l partials/head.php
 php -l partials/header.php
 php -l partials/footer.php
+php -l partials/private-config.php
+php -l partials/structured-data.php
 php -l api/contact.php
 php -l api/plan.php
 php -l api/plan-catalog.php
@@ -217,7 +238,7 @@ Remove-Item Env:ECERT_RATE_LIMIT_DIR
 Remove-Item Env:ECERT_ALLOWED_ORIGIN
 ```
 
-Browser QA uses installed Chrome at widths 1440, 1024, 768, 390, and 320. Check all five pages (`/`, `/features`, `/pricing`, `/contact`, `/verify`) for horizontal overflow, a 12px rendered-text floor, keyboard focus visibility, primary destinations, one `aria-current="page"`, and a header with only the single Sign In button. The site audit also checks canonical and `og:url`, root-absolute assets, the `301` redirects, that private paths, partials and `router.php` return `403`, and that an unknown path returns `404`. Also check:
+Browser QA uses installed Chrome at widths 1440, 1024, 768, 390, and 320. Check all five pages (`/`, `/features`, `/pricing`, `/contact`, `/verify`) for horizontal overflow, a 12px rendered-text floor, keyboard focus visibility, primary destinations, one `aria-current="page"`, and a header with only the single Sign In button. The site audit also checks canonical and `og:url`, the social and share-image tags, the JSON-LD block of every page (valid JSON, the expected `@type` values, pricing offers equal to the plan prices, no rating or review), `/robots.txt`, `/sitemap.xml` and the share cover, root-absolute assets, the `301` redirects, that private paths, partials and `router.php` return `403`, and that an unknown path returns `404`. Also check:
 
 - Home: three slides, Pause/Play, Left/Right keys when the carousel itself has focus, horizontal swipe, autoplay pause after manual input, reduced-motion behavior, and the static middle workflow.
 - Pricing: pointer selection, Left/Right/Home/End, `type=normal|government` deep links, rejected extra query values, exact prices, and both groups visible with JavaScript disabled.

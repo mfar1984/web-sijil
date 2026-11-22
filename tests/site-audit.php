@@ -52,7 +52,19 @@ $pages = [
     '/checkout' => ['Pricing', '/pricing'],
     '/payment/status' => ['Pricing', '/pricing'],
 ];
+// Structured data each page must publish, in order. The Organization is
+// site-wide; /checkout and /payment/status are noindex and carry nothing else.
+$expectedJsonLd = [
+    '/' => ['Organization', 'WebSite'],
+    '/features' => ['Organization', 'BreadcrumbList'],
+    '/pricing' => ['Organization', 'BreadcrumbList', 'SoftwareApplication'],
+    '/verify' => ['Organization', 'BreadcrumbList'],
+    '/contact' => ['Organization', 'BreadcrumbList'],
+    '/checkout' => ['Organization'],
+    '/payment/status' => ['Organization'],
+];
 $documents = [];
+$jsonLd = [];
 
 foreach ($pages as $page => [$navLabel, $navHref]) {
     [$status, $html] = $fetch($baseUrl . $page);
@@ -79,6 +91,42 @@ foreach ($pages as $page => [$navLabel, $navHref]) {
     $assert(!str_contains($xpath->query('//header')->item(0)?->textContent ?? '', 'Get Started'), "{$page} header has no Get Started link");
     $assert($xpath->query('//a[contains(@href, ".html") or contains(@href, ".php")]')->length === 0, "{$page} links to no .php or .html page");
 
+    $social = [
+        'og:site_name' => 'e-Certificate',
+        'og:image' => 'https://www.e-certificate.com.my/assets/images/og-cover.png',
+        'og:image:width' => '1200',
+        'og:image:height' => '630',
+    ];
+    foreach ($social as $property => $content) {
+        $nodes = $xpath->query('//head/meta[@property="' . $property . '"]');
+        $assert($nodes->length === 1 && $nodes->item(0)->getAttribute('content') === $content, "{$page} {$property} is {$content}");
+    }
+    $twitterCards = $xpath->query('//head/meta[@name="twitter:card"]');
+    $twitterImages = $xpath->query('//head/meta[@name="twitter:image"]');
+    $assert($twitterCards->length === 1 && $twitterCards->item(0)->getAttribute('content') === 'summary_large_image'
+        && $twitterImages->length === 1 && $twitterImages->item(0)->getAttribute('content') === $social['og:image'],
+        "{$page} declares a large Twitter card with the share cover");
+    foreach (['og:title', 'og:description', 'og:image:alt'] as $property) {
+        $nodes = $xpath->query('//head/meta[@property="' . $property . '"]');
+        $assert($nodes->length === 1 && trim($nodes->item(0)->getAttribute('content')) !== '', "{$page} {$property} is present");
+    }
+
+    // Structured data: one JSON-LD block, valid JSON, the expected @type values
+    // and no fabricated rating, review or award.
+    $scripts = $xpath->query('//script[@type="application/ld+json"]');
+    $assert($scripts->length === 1, "{$page} has exactly one JSON-LD block");
+    $raw = $scripts->item(0)?->textContent ?? '';
+    $decoded = json_decode($raw, true);
+    $jsonLd[$page] = is_array($decoded) ? $decoded : [];
+    $types = [];
+    foreach ((array) ($jsonLd[$page]['@graph'] ?? []) as $node) {
+        $types[] = is_array($node) ? (string) ($node['@type'] ?? '') : '';
+    }
+    $assert(is_array($decoded) && ($decoded['@context'] ?? null) === 'https://schema.org', "{$page} JSON-LD is valid JSON on the schema.org context");
+    $assert($types === $expectedJsonLd[$page], "{$page} JSON-LD publishes " . implode(', ', $expectedJsonLd[$page]));
+    $assert(!str_contains($raw, '</script'), "{$page} JSON-LD cannot close its own script element");
+    $assert(preg_match('/aggregateRating|ratingValue|reviewCount|"review"|award/i', $raw) !== 1, "{$page} JSON-LD claims no rating, review or award");
+
     $canonical = 'https://www.e-certificate.com.my' . $page;
     $canonicalLinks = $xpath->query('//head/link[@rel="canonical"]');
     $ogUrls = $xpath->query('//head/meta[@property="og:url"]');
@@ -104,6 +152,43 @@ foreach ($denied as $deniedPath) {
     [$status] = $fetchNoFollow("{$baseUrl}/{$deniedPath}");
     $assert($status === 403, "{$deniedPath} is denied with 403");
 }
+
+// Crawler files at the site root. No deny rule and no clean-URL rewrite may
+// swallow them, and the sitemap lists only the public pages.
+[$robotsStatus, $robots] = $fetch("{$baseUrl}/robots.txt");
+$assert($robotsStatus === 200, '/robots.txt returns 200');
+$assert(str_contains($robots, 'Sitemap: https://www.e-certificate.com.my/sitemap.xml'), '/robots.txt points at the sitemap');
+foreach (['/checkout', '/payment/status', '/api/'] as $disallowed) {
+    $assert(str_contains($robots, "Disallow: {$disallowed}"), "/robots.txt disallows {$disallowed}");
+}
+$assert(!str_contains($robots, 'Disallow: /assets'), '/robots.txt keeps /assets crawlable for rendering');
+
+[$sitemapStatus, $sitemap] = $fetch("{$baseUrl}/sitemap.xml");
+$assert($sitemapStatus === 200, '/sitemap.xml returns 200');
+$sitemapXml = simplexml_load_string($sitemap);
+$assert($sitemapXml instanceof SimpleXMLElement, '/sitemap.xml parses as XML');
+$sitemapUrls = [];
+if ($sitemapXml instanceof SimpleXMLElement) {
+    foreach ($sitemapXml->url as $entry) {
+        $sitemapUrls[] = (string) $entry->loc;
+    }
+}
+$assert($sitemapUrls === [
+    'https://www.e-certificate.com.my/',
+    'https://www.e-certificate.com.my/features',
+    'https://www.e-certificate.com.my/pricing',
+    'https://www.e-certificate.com.my/contact',
+    'https://www.e-certificate.com.my/verify',
+], '/sitemap.xml lists exactly the five public pages');
+foreach ($sitemapUrls as $sitemapUrl) {
+    [$sitemapPageStatus] = $fetch($baseUrl . parse_url($sitemapUrl, PHP_URL_PATH));
+    $assert($sitemapPageStatus === 200, "sitemap URL {$sitemapUrl} resolves");
+}
+
+[$coverStatus, $cover] = $fetch("{$baseUrl}/assets/images/og-cover.png");
+$coverSize = @getimagesizefromstring($cover);
+$assert($coverStatus === 200 && is_array($coverSize) && $coverSize[0] === 1200 && $coverSize[1] === 630 && strlen($cover) < 307200,
+    'the share cover is a 1200x630 image under 300 KB');
 
 $redirects = [
     '/index.php' => '/',
@@ -223,6 +308,28 @@ foreach ($cards as $card) {
 }
 
 $assert(array_keys($seen) === array_keys($expected), 'all approved type and duration combinations appear once in order');
+
+// The pricing offers must be the prices the plan cards print.
+$software = null;
+foreach ((array) ($jsonLd['/pricing']['@graph'] ?? []) as $node) {
+    if (is_array($node) && ($node['@type'] ?? '') === 'SoftwareApplication') {
+        $software = $node;
+    }
+}
+$aggregate = $software['offers'] ?? [];
+$assert(($aggregate['@type'] ?? '') === 'AggregateOffer' && ($aggregate['priceCurrency'] ?? '') === 'MYR'
+    && ($aggregate['lowPrice'] ?? null) === min($expected) && ($aggregate['highPrice'] ?? null) === max($expected)
+    && ($aggregate['offerCount'] ?? null) === count($expected),
+    'pricing JSON-LD offers every plan in MYR from RM' . min($expected) . ' to RM' . max($expected));
+$offerPrices = [];
+foreach ((array) ($aggregate['offers'] ?? []) as $offer) {
+    $offerPrices[(string) ($offer['sku'] ?? '')] = $offer['price'] ?? null;
+}
+foreach ($expected as $key => $approvedPrice) {
+    [$type, $duration] = explode(':', $key);
+    $code = sprintf('%s-%02dm', $type, (int) $duration);
+    $assert(($offerPrices[$code] ?? null) === $approvedPrice, "pricing JSON-LD offer {$code} is RM{$approvedPrice}");
+}
 $staticTablist = $xpath->query('//*[@data-pricing-tablist]');
 $staticTabs = $xpath->query('//*[@data-pricing-tab]');
 $staticPanels = $xpath->query('//*[@data-pricing-panel]');

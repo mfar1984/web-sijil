@@ -17,4 +17,8 @@ return [
     // Optional; defaults shown. Leave them out on production.
     // 'smtp_host'    => 'indigo.herosite.pro',
     // 'smtp_port'    => 587,
+    // Optional Google Search Console token (HTML tag method). While this key is
+    // absent the pages print no verification meta tag. Paste only the content
+    // value of the tag Search Console shows, not the whole tag.
+    // 'google_site_verification' => '<GOOGLE_SITE_VERIFICATION_TOKEN>',
 ];
